@@ -1,0 +1,118 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Sora', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+
+  --color-indigo: #5b4cf0;
+  --color-indigo-dark: #3b2db8;
+  --color-indigo-soft: #ecebfe;
+  --color-grape: #8b5cf6;
+  --color-mint: #2ec4a6;
+  --color-mint-dark: #1e9c83;
+  --color-mint-soft: #d3f5ec;
+  --color-forest: #0f5e4f;
+  --color-lemon: #ffd23f;
+  --color-lemon-dark: #d9a900;
+  --color-lemon-soft: #fff1c2;
+  --color-orange: #ff9f1c;
+  --color-orange-soft: #ffefd6;
+  --color-amber-ink: #a65a00;
+  --color-sky: #4cc9f0;
+  --color-bg: #f5f4fa;
+  --color-ink: #1c1830;
+  --color-muted: #5c5870;
+  --color-line: #e6e3f1;
+  --color-chip: #f3f1fa;
+  --color-off: #8e7fa3;
+
+  --color-r-commun: #46566b;
+  --color-r-commun-bg: #e9eef4;
+  --color-r-commun-ring: #a9b6c6;
+  --color-r-rare: #0b5cc2;
+  --color-r-rare-bg: #ddeeff;
+  --color-r-rare-ring: #7db8ff;
+  --color-r-epique: #5b2dc9;
+  --color-r-epique-bg: #ede5ff;
+  --color-r-epique-ring: #b79cfa;
+  --color-r-legendaire: #a65a00;
+  --color-r-legendaire-bg: #ffefd6;
+  --color-r-legendaire-ring: #ffc46b;
+  --color-r-mythique: #b0135a;
+  --color-r-mythique-bg: #ffe0ec;
+  --color-r-mythique-ring: #9d92f7;
+
+  --shadow-card: 0 1px 0 #e6e3f1, 0 6px 16px rgba(28, 24, 48, 0.05);
+  --shadow-pop: 0 12px 32px rgba(28, 24, 48, 0.25);
+
+  --animate-bounce-soft: bounce-soft 0.9s ease-in-out infinite;
+  --animate-wiggle: wiggle 1.8s ease-in-out infinite;
+  --animate-shimmer: shimmer 3s linear infinite;
+  --animate-rays: spin 9s linear infinite;
+
+  @keyframes bounce-soft {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0); }
+    20% { transform: rotate(-9deg); }
+    40% { transform: rotate(8deg); }
+    60% { transform: rotate(-5deg); }
+    80% { transform: rotate(3deg); }
+  }
+  @keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button {
+    cursor: pointer;
+    font: inherit;
+  }
+  button:disabled {
+    cursor: default;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-indigo);
+    outline-offset: 2px;
+  }
+}
+
+@utility press {
+  transition: transform 0.08s ease-out;
+  &:active:not(:disabled) {
+    transform: translateY(2px);
+  }
+}
+
+@utility myth {
+  background: linear-gradient(90deg, #ffe0ec, #ffd6f5, #e8ddff, #ffe0ec);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
