@@ -6,6 +6,7 @@ import { fmt, fmtMult } from '../game/rarity';
 import { Button, Confirm } from '../components/ui';
 import { Coffee } from '../components/icons';
 import type { GameState } from '../game/engine';
+import { useTuto } from '../tutorial/store';
 
 const RULES: [string, string][] = [
   ['Raretés', 'À la création, tu dis combien de temps prend la tâche et quelle flemme elle te donne. Plus elle est pénible, plus elle rapporte.'],
@@ -21,6 +22,7 @@ export function ProfilScreen() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const level = levelInfo(state.totalXp).level;
+  const { active: inTuto, start: startTuto } = useTuto();
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(snapshot(state), null, 2)], { type: 'application/json' });
@@ -83,6 +85,9 @@ export function ProfilScreen() {
             </div>
           ))}
         </dl>
+        <Button tone="soft" className="self-start" onClick={startTuto} disabled={inTuto}>
+          Revoir le tutoriel
+        </Button>
       </section>
 
       <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-card">
@@ -90,26 +95,32 @@ export function ProfilScreen() {
         <p className="text-sm font-medium text-muted">
           Tout est enregistré dans ce navigateur. Télécharge une sauvegarde pour changer d'appareil ou ne rien perdre.
         </p>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={exportData}>Télécharger une sauvegarde</Button>
-          <Button tone="soft" onClick={() => fileRef.current?.click()}>
-            Restaurer
-          </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void onImport(f);
-              e.target.value = '';
-            }}
-          />
-        </div>
-        <button type="button" onClick={() => setConfirmReset(true)} className="self-start py-2 text-sm font-semibold text-muted underline">
-          Tout recommencer à zéro
-        </button>
+        {inTuto ? (
+          <p className="text-sm font-semibold text-indigo">Pendant le tuto, tu joues sur une partie de démo : tes données ne sont pas touchées.</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={exportData}>Télécharger une sauvegarde</Button>
+              <Button tone="soft" onClick={() => fileRef.current?.click()}>
+                Restaurer
+              </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void onImport(f);
+                  e.target.value = '';
+                }}
+              />
+            </div>
+            <button type="button" onClick={() => setConfirmReset(true)} className="self-start py-2 text-sm font-semibold text-muted underline">
+              Tout recommencer à zéro
+            </button>
+          </>
+        )}
       </section>
 
       <Confirm

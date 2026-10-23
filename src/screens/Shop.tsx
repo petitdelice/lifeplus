@@ -74,6 +74,7 @@ function OwnedCard({ r, onSell, onGamble, onDelete }: { r: Reward; onSell: () =>
       <div className="flex gap-2">
         <Button
           tone={can ? 'indigo' : 'off'}
+          data-tuto="enjoy"
           className="flex-[3]"
           onClick={() => {
             if (enjoy(r.id)) {
@@ -84,7 +85,7 @@ function OwnedCard({ r, onSell, onGamble, onDelete }: { r: Reward; onSell: () =>
         >
           Utiliser · {fmt(price)}
         </Button>
-        <Button tone="lemon" className="flex-[2]" onClick={onGamble}>
+        <Button tone="lemon" className="flex-[2]" data-tuto="gamble" onClick={onGamble}>
           Gamble · {fmt(gamblePrice(price))}
         </Button>
       </div>
@@ -117,6 +118,7 @@ function LockedCard({ r }: { r: Reward }) {
       <div className="flex gap-2">
         <Button
           tone={free ? 'mint' : can ? 'lemon' : 'off'}
+          data-tuto="unlock"
           className="flex-1"
           onClick={() => {
             if (unlock(r.id)) showToast(`${r.name} débloqué !`, 'good');

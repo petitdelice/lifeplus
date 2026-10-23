@@ -9,6 +9,8 @@ import { TasksScreen } from './screens/Tasks';
 import { ShopScreen } from './screens/Shop';
 import { CheminScreen } from './screens/Chemin';
 import { ProfilScreen } from './screens/Profil';
+import { Tutorial } from './tutorial/Tutorial';
+import { firstLaunch, useTuto } from './tutorial/store';
 
 type Route = 'taches' | 'shop' | 'chemin' | 'profil';
 
@@ -38,6 +40,13 @@ export default function App() {
   const [route, go] = useRoute();
   const refreshDay = useGame((s) => s.refreshDay);
   const requestNewTask = useGame((s) => s.requestNewTask);
+  const startTuto = useTuto((s) => s.start);
+  const gen = useTuto((s) => s.gen);
+
+  // A brand-new player gets a guided tour on a demo save first.
+  useEffect(() => {
+    if (firstLaunch) startTuto();
+  }, [startTuto]);
 
   // Check the streak on launch and whenever the app comes back to the foreground.
   useEffect(() => {
@@ -93,7 +102,7 @@ export default function App() {
               transition={{ duration: 0.18 }}
               className="mx-auto w-full max-w-3xl"
             >
-              <ErrorBoundary key={route} onReset={() => go('taches')}>
+              <ErrorBoundary key={`${route}-${gen}`} onReset={() => go('taches')}>
                 {screen}
               </ErrorBoundary>
             </motion.div>
@@ -136,11 +145,13 @@ export default function App() {
         whileTap={{ scale: 0.9 }}
         whileHover={{ scale: 1.05 }}
         aria-label="Ajouter une tâche"
+        data-tuto="add"
         className="fixed bottom-[calc(1.6rem+env(safe-area-inset-bottom))] left-1/2 z-30 flex size-15 -translate-x-1/2 items-center justify-center rounded-full bg-indigo text-white shadow-[0_3px_0_var(--color-indigo-dark)] md:right-10 md:bottom-10 md:left-auto md:translate-x-0"
       >
         <Plus size={28} />
       </motion.button>
 
+      <Tutorial />
       <Celebrations />
       <Toast />
     </div>

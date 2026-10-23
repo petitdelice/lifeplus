@@ -66,6 +66,7 @@ export function StreakChip() {
   const streak = useGame((s) => s.streak);
   return (
     <div
+      data-tuto="streak"
       className="flex items-center gap-1.5 rounded-full bg-bg px-3 py-1.5 font-display text-base font-semibold"
       aria-label={`Streak de ${streak.current} jours`}
       title={streak.freezes ? `${streak.freezes} gel${streak.freezes > 1 ? 's' : ''} de streak en stock` : undefined}
@@ -95,7 +96,7 @@ export function Header() {
           <StreakChip />
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" data-tuto="level">
         <motion.div
           key={level}
           initial={{ scale: 0.6, rotate: -10 }}

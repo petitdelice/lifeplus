@@ -155,7 +155,7 @@ export function CheminScreen() {
         </div>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-card">
+      <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-card" data-tuto="badges">
         <div className="flex items-baseline justify-between">
           <h2 className="font-display text-lg font-bold">Badges</h2>
           <span className="text-sm font-semibold text-muted">

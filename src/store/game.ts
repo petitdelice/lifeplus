@@ -51,6 +51,22 @@ export function snapshot(s: Store): GameState {
 
 let toastId = 0;
 
+export const SAVE_KEY = 'lifeplus-v1';
+
+/** True while the tutorial runs: the demo plays in memory and the real save is never touched. */
+let sandbox = false;
+export const setSandbox = (on: boolean) => {
+  sandbox = on;
+};
+
+export function hasSave(): boolean {
+  try {
+    return localStorage.getItem(SAVE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export const useGame = create<Store>()(
   persist(
     (set, get) => {
@@ -121,9 +137,17 @@ export const useGame = create<Store>()(
       };
     },
     {
-      name: 'lifeplus-v1',
+      name: SAVE_KEY,
       version: 1,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => ({
+        getItem: (k) => localStorage.getItem(k),
+        setItem: (k, v) => {
+          if (!sandbox) localStorage.setItem(k, v);
+        },
+        removeItem: (k) => {
+          if (!sandbox) localStorage.removeItem(k);
+        },
+      })),
       partialize: (s) => snapshot(s),
     },
   ),

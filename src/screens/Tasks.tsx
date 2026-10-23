@@ -81,6 +81,7 @@ function TaskCard({ row, onEdit }: { row: Row; onEdit: (t: Task) => void }) {
         whileTap={{ scale: 0.88 }}
         onClick={toggle}
         disabled={done && !undoable}
+        data-tuto={done ? undefined : 'check'}
         aria-label={done ? (undoable ? `Décocher : ${title}` : `${title} : déjà fait`) : `Terminer : ${title}`}
         aria-pressed={done}
         className="flex size-11 shrink-0 items-center justify-center rounded-full border-[3px]"
@@ -219,7 +220,7 @@ export function TasksScreen() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-2 overflow-x-auto pt-4 pb-1" role="tablist" aria-label="Filtrer les tâches">
+      <div className="flex gap-2 overflow-x-auto pt-4 pb-1" data-tuto="tabs" role="tablist" aria-label="Filtrer les tâches">
         {(
           [
             ['today', "Aujourd'hui"],
