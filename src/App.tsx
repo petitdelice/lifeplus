@@ -3,6 +3,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { useGame } from './store/game';
 import { Header, StreakChip, Wallet } from './components/Header';
 import { Celebrations, Toast } from './components/Celebrations';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Bag, Check, Path, Plus, User } from './components/icons';
 import { TasksScreen } from './screens/Tasks';
 import { ShopScreen } from './screens/Shop';
@@ -46,7 +47,9 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', on);
   }, [refreshDay]);
 
-  useEffect(() => window.scrollTo({ top: 0 }), [route]);
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [route]);
 
   const screen = { taches: <TasksScreen />, shop: <ShopScreen />, chemin: <CheminScreen />, profil: <ProfilScreen /> }[route];
 
@@ -90,7 +93,9 @@ export default function App() {
               transition={{ duration: 0.18 }}
               className="mx-auto w-full max-w-3xl"
             >
-              {screen}
+              <ErrorBoundary key={route} onReset={() => go('taches')}>
+                {screen}
+              </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </main>
