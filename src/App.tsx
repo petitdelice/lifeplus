@@ -9,10 +9,13 @@ import { TasksScreen } from './screens/Tasks';
 import { ShopScreen } from './screens/Shop';
 import { CheminScreen } from './screens/Chemin';
 import { ProfilScreen } from './screens/Profil';
+import { ProjectScreen } from './screens/Project';
 import { Tutorial } from './tutorial/Tutorial';
 import { firstLaunch, useTuto } from './tutorial/store';
 
 type Route = 'taches' | 'shop' | 'chemin' | 'profil';
+/** A tab of the nav, or a project page (#/projet/<id>) that belongs to the tasks tab. */
+type Location = { route: Route; project?: string };
 
 const NAV: { id: Route; label: string; Icon: typeof Check }[] = [
   { id: 'taches', label: 'Tâches', Icon: Check },
@@ -21,13 +24,15 @@ const NAV: { id: Route; label: string; Icon: typeof Check }[] = [
   { id: 'profil', label: 'Profil', Icon: User },
 ];
 
-function readRoute(): Route {
-  const h = window.location.hash.replace(/^#\/?/, '') as Route;
-  return NAV.some((n) => n.id === h) ? h : 'taches';
+function readRoute(): Location {
+  const h = window.location.hash.replace(/^#\/?/, '');
+  const project = /^projet\/(.+)$/.exec(h)?.[1];
+  if (project) return { route: 'taches', project: decodeURIComponent(project) };
+  return { route: NAV.some((n) => n.id === h) ? (h as Route) : 'taches' };
 }
 
-function useRoute(): [Route, (r: Route) => void] {
-  const [route, setRoute] = useState<Route>(readRoute);
+function useRoute(): [Location, (r: Route) => void] {
+  const [route, setRoute] = useState<Location>(readRoute);
   useEffect(() => {
     const on = () => setRoute(readRoute());
     window.addEventListener('hashchange', on);
@@ -37,7 +42,8 @@ function useRoute(): [Route, (r: Route) => void] {
 }
 
 export default function App() {
-  const [route, go] = useRoute();
+  const [{ route, project }, go] = useRoute();
+  const page = project ? `projet-${project}` : route;
   const refreshDay = useGame((s) => s.refreshDay);
   const requestNewTask = useGame((s) => s.requestNewTask);
   const startTuto = useTuto((s) => s.start);
@@ -58,9 +64,13 @@ export default function App() {
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [route]);
+  }, [page]);
 
-  const screen = { taches: <TasksScreen />, shop: <ShopScreen />, chemin: <CheminScreen />, profil: <ProfilScreen /> }[route];
+  const screen = project ? (
+    <ProjectScreen id={project} />
+  ) : (
+    { taches: <TasksScreen />, shop: <ShopScreen />, chemin: <CheminScreen />, profil: <ProfilScreen /> }[route]
+  );
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-6xl md:gap-6 md:px-6 md:py-6">
@@ -91,18 +101,18 @@ export default function App() {
       </nav>
 
       <div className="flex min-w-0 grow flex-col">
-        {route === 'taches' && <Header />}
+        {route === 'taches' && !project && <Header />}
         <main className="flex grow flex-col px-5 pb-36 md:px-0 md:pb-12">
           <AnimatePresence mode="wait">
             <motion.div
-              key={route}
+              key={page}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18 }}
               className="mx-auto w-full max-w-3xl"
             >
-              <ErrorBoundary key={`${route}-${gen}`} onReset={() => go('taches')}>
+              <ErrorBoundary key={`${page}-${gen}`} onReset={() => go('taches')}>
                 {screen}
               </ErrorBoundary>
             </motion.div>
