@@ -19,10 +19,17 @@ export function demoState(today = dayKey()): GameState {
       kind: 'project',
       duration: 3,
       flemme: 3,
-      steps: [
-        { title: 'Le bureau', duration: 2, flemme: 2 },
-        { title: 'La cuisine', duration: 2, flemme: 3 },
-        { title: 'Le grenier', duration: 3, flemme: 4 },
+      emoji: '🧹',
+      stages: [
+        {
+          title: 'Le bureau',
+          tasks: [
+            { title: 'Trier les papiers', duration: 2, flemme: 2 },
+            { title: 'Dépoussiérer', duration: 1, flemme: 2 },
+          ],
+        },
+        { title: 'La cuisine', tasks: [{ title: 'Vider les placards', duration: 2, flemme: 3 }] },
+        { title: 'Le grenier', tasks: [{ title: 'Tout descendre', duration: 3, flemme: 4 }] },
       ],
     },
     today,

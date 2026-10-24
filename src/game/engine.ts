@@ -31,8 +31,16 @@ import { DEFAULT_REWARDS } from './defaults';
 
 export type TaskKind = 'normal' | 'recurring' | 'project';
 
+/** A stage of a project path: a group of tasks, shown as one section of the path. */
+export interface Stage {
+  id: string;
+  title: string;
+}
+
+/** A task inside a project. Kept as one flat list in path order; each points to its stage. */
 export interface Step {
   id: string;
+  stageId: string;
   title: string;
   duration: number;
   flemme: number;
@@ -55,6 +63,8 @@ export interface Task {
   lastPeriod?: string;
   chain: number;
   // project
+  emoji?: string;
+  stages: Stage[];
   steps: Step[];
   projectXp: number;
   projectEclats: number;
@@ -137,6 +147,7 @@ export type GameEvent =
   | { type: 'chest'; name: string; amount: number; days: number }
   | { type: 'badge'; id: string }
   | { type: 'project'; title: string; xp: number; eclats: number }
+  | { type: 'stage'; project: string; title: string; index: number; total: number }
   | { type: 'streak-broken'; best: number; lost: number }
   | { type: 'freeze-used'; count: number }
   | { type: 'shop-welcome'; count: number };
@@ -180,23 +191,69 @@ export interface TaskInput {
   flemme: number;
   rarity?: Rarity;
   recurrence?: Recurrence;
-  steps?: { id?: string; title: string; duration: number; flemme: number; rarity?: Rarity }[];
+  emoji?: string;
+  /** Project path: stages, each holding its tasks. */
+  stages?: StageInput[];
+  /** Older flat form of a project, put in a single stage. */
+  steps?: StepInput[];
 }
 
-function buildSteps(input: TaskInput, previous: Step[] = []): Step[] {
-  return (input.steps ?? [])
-    .filter((s) => s.title.trim())
-    .map((s) => {
+export interface StepInput {
+  id?: string;
+  title: string;
+  duration: number;
+  flemme: number;
+  rarity?: Rarity;
+}
+
+export interface StageInput {
+  id?: string;
+  title: string;
+  tasks: StepInput[];
+}
+
+export const stageName = (i: number) => `Étape ${i + 1}`;
+
+/** Stages without any named task are dropped; an unnamed stage gets its number. */
+function buildProject(input: TaskInput, previous: Step[] = []): { stages: Stage[]; steps: Step[] } {
+  const raw = input.stages ?? [{ title: '', tasks: input.steps ?? [] }];
+  const stages: Stage[] = [];
+  const steps: Step[] = [];
+  for (const st of raw) {
+    const tasks = st.tasks.filter((s) => s.title.trim());
+    if (!tasks.length) continue;
+    const stage = { id: st.id ?? uid('g'), title: st.title.trim() || stageName(stages.length) };
+    stages.push(stage);
+    for (const s of tasks) {
       const old = previous.find((p) => p.id === s.id);
-      return {
+      steps.push({
         id: s.id ?? uid('s'),
+        stageId: stage.id,
         title: s.title.trim(),
         duration: s.duration,
         flemme: s.flemme,
         rarity: s.rarity ?? rarityFromScore(s.duration, s.flemme),
         doneDay: old?.doneDay,
-      };
-    });
+      });
+    }
+  }
+  return { stages, steps };
+}
+
+/** Saves from before project paths have flat steps only: they become one stage, nothing is lost. */
+function migrateTask(t: Task): Task {
+  if (t.kind !== 'project') return t.stages ? t : { ...t, stages: [] };
+  const stages = t.stages?.length ? t.stages : [{ id: uid('g'), title: stageName(0) }];
+  const ids = new Set(stages.map((g) => g.id));
+  return { ...t, stages, steps: (t.steps ?? []).map((s) => (s.stageId && ids.has(s.stageId) ? s : { ...s, stageId: stages[0].id })) };
+}
+
+export function migrateState(state: GameState): GameState {
+  return {
+    ...state,
+    tasks: (state.tasks ?? []).map(migrateTask),
+    completions: (state.completions ?? []).map((c) => (c.prevTask ? { ...c, prevTask: migrateTask(c.prevTask) } : c)),
+  };
 }
 
 export function addTask(state: GameState, input: TaskInput, today = dayKey()): GameState {
@@ -210,7 +267,8 @@ export function addTask(state: GameState, input: TaskInput, today = dayKey()): G
     createdDay: today,
     recurrence: input.kind === 'recurring' ? input.recurrence ?? 'daily' : undefined,
     chain: 0,
-    steps: input.kind === 'project' ? buildSteps(input) : [],
+    emoji: input.kind === 'project' ? input.emoji : undefined,
+    ...(input.kind === 'project' ? buildProject(input) : { stages: [], steps: [] }),
     projectXp: 0,
     projectEclats: 0,
   };
@@ -230,7 +288,8 @@ export function updateTask(state: GameState, id: string, input: TaskInput): Game
             flemme: input.flemme,
             rarity: input.rarity ?? rarityFromScore(input.duration, input.flemme),
             recurrence: t.kind === 'recurring' ? input.recurrence ?? t.recurrence : undefined,
-            steps: t.kind === 'project' ? buildSteps(input, t.steps) : [],
+            emoji: t.kind === 'project' ? input.emoji : undefined,
+            ...(t.kind === 'project' ? buildProject(input, t.steps) : { stages: [], steps: [] }),
           },
     ),
   };
@@ -369,6 +428,12 @@ export function completeTask(state: GameState, taskId: string, stepId?: string, 
       const finished = state.tasks.filter((t) => t.kind === 'project' && t.finishedDay).length + 1;
       award('project-1');
       if (finished >= 5) award('project-5');
+    } else {
+      const step = next.steps.find((s) => s.id === stepId)!;
+      const index = next.stages.findIndex((g) => g.id === step.stageId);
+      if (index >= 0 && next.steps.every((s) => s.stageId !== step.stageId || s.doneDay)) {
+        events.push({ type: 'stage', project: next.title, title: next.stages[index].title, index, total: next.stages.length });
+      }
     }
   }
 
@@ -448,6 +513,7 @@ const ORDER: Record<GameEvent['type'], number> = {
   'freeze-used': 0,
   'shop-welcome': 0,
   project: 1,
+  stage: 1,
   levelup: 2,
   chest: 3,
   badge: 4,

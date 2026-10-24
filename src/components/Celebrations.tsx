@@ -73,6 +73,19 @@ function content(e: GameEvent) {
         extra: `Bonus final\n+${fmt(e.xp)} XP · +${fmt(e.eclats)} éclats`,
         cta: 'Trop bien',
       };
+    case 'stage':
+      return {
+        full: false,
+        big: (
+          <motion.span className="text-6xl" animate={{ rotate: [0, -10, 10, 0], y: [0, -6, 0] }} transition={{ duration: 0.8 }}>
+            🚩
+          </motion.span>
+        ),
+        title: 'Étape franchie !',
+        text: `${e.title} · ${e.project}`,
+        extra: e.total - e.index - 1 > 1 ? `Plus que ${e.total - e.index - 1} étapes avant l’arrivée.` : 'Plus qu’une étape avant l’arrivée !',
+        cta: 'En route',
+      };
     case 'chest':
       return {
         full: false,
@@ -148,7 +161,7 @@ export function Celebrations() {
           aria-label={c.title}
         >
           {c.full && <Rays />}
-          {(c.full || e.type === 'chest' || e.type === 'badge') && <Confetti count={c.full ? 48 : 24} />}
+          {(c.full || e.type === 'chest' || e.type === 'badge' || e.type === 'stage') && <Confetti count={c.full ? 48 : 24} />}
           <motion.div
             initial={{ scale: 0.4, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
