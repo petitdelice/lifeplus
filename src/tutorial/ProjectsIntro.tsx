@@ -117,7 +117,7 @@ function GrowingGains() {
 function MiniCard() {
   return (
     <motion.div
-      className="flex w-full max-w-60 flex-col gap-2 rounded-2xl bg-white p-3 text-left shadow-card ring-1 ring-line"
+      className="flex w-full max-w-72 flex-col gap-2 rounded-2xl bg-white p-3 text-left shadow-card ring-1 ring-line"
       initial={{ y: 10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: 'spring', damping: 16, stiffness: 240, delay: 0.1 }}
