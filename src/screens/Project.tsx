@@ -7,7 +7,6 @@ import { RARITY_UI, fmt } from '../game/rarity';
 import { Button, Sheet } from '../components/ui';
 import { Check, Spark } from '../components/icons';
 import { RarityChip } from './TaskForm';
-import { ProjectFunnel } from './ProjectFunnel';
 import { STAGE_COLORS } from '../components/stageColors';
 
 /** Sideways offset of each node, so the path winds like a trail. */
@@ -124,7 +123,6 @@ export function ProjectScreen({ id }: { id: string }) {
   const { complete, undo } = state;
   const task = state.tasks.find((t) => t.id === id && t.kind === 'project');
   const [openStep, setOpenStep] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
   const [float, setFloat] = useState<{ stepId: string; text: string } | null>(null);
 
   const [away, setAway] = useState<'up' | 'down' | null>(null);
@@ -223,9 +221,6 @@ export function ProjectScreen({ id }: { id: string }) {
                 : `Étape ${stageIndex + 1}/${task.stages.length} · ${task.stages[stageIndex]?.title ?? ''}`}
             </span>
           </div>
-          <Button tone="soft" onClick={() => setEditing(true)} className="shrink-0 px-3 text-sm">
-            Modifier
-          </Button>
         </div>
         <div className="flex items-center gap-3">
           <div className="h-3 grow overflow-hidden rounded-full bg-indigo-soft">
@@ -372,7 +367,6 @@ export function ProjectScreen({ id }: { id: string }) {
         )}
       </AnimatePresence>
 
-      <ProjectFunnel open={editing} onClose={() => setEditing(false)} task={task} />
     </div>
   );
 }

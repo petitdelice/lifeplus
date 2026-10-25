@@ -5,7 +5,7 @@ import { findUndoable, isDone, previewGains, type Task } from '../game/engine';
 import { RECURRENCE_LABEL, dayKey, nextChain, regularityBonus } from '../game/rules';
 import { RARITY_UI, fmt } from '../game/rarity';
 import { TASK_SUGGESTIONS } from '../game/defaults';
-import { Check, Trash } from '../components/icons';
+import { Check, Pencil, Trash } from '../components/icons';
 import { Button } from '../components/ui';
 import { RarityChip, TaskForm } from './TaskForm';
 import { ConfirmDeleteProject, ProjectFunnel } from './ProjectFunnel';
@@ -134,6 +134,7 @@ function ProjectCard({ task }: { task: Task }) {
   const { done, total, pct, stageIndex, current } = projectProgress(task);
   const color = STAGE_COLORS[Math.max(0, stageIndex) % STAGE_COLORS.length];
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
   return (
     <motion.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative min-w-0">
       <motion.a
@@ -151,8 +152,8 @@ function ProjectCard({ task }: { task: Task }) {
               {task.finishedDay ? 'Terminé 🏆' : `Étape ${stageIndex + 1}/${task.stages.length} · ${task.stages[stageIndex]?.title ?? ''}`}
             </span>
           </div>
-          {/* Room for the delete button, which sits over the card: a button can't live inside a link. */}
-          <span className="mr-10 shrink-0 font-display text-sm font-semibold text-muted">
+          {/* Room for the edit and delete buttons, which sit over the card: a button can't live inside a link. */}
+          <span className="mr-[5.5rem] shrink-0 font-display text-sm font-semibold text-muted">
             {done}/{total}
           </span>
         </div>
@@ -186,14 +187,25 @@ function ProjectCard({ task }: { task: Task }) {
           {task.finishedDay ? `${fmt(task.projectEclats)} éclats gagnés sur ce chemin.` : current ? `Prochaine : ${current.title}` : ''}
         </span>
       </motion.a>
-      <button
-        type="button"
-        aria-label={`Supprimer le projet ${task.title}`}
-        onClick={() => setDeleting(true)}
-        className="press absolute top-[18px] right-3 flex size-11 items-center justify-center rounded-xl text-muted hover:bg-chip"
-      >
-        <Trash />
-      </button>
+      <div className="absolute top-[18px] right-3 flex">
+        <button
+          type="button"
+          aria-label={`Modifier le projet ${task.title}`}
+          onClick={() => setEditing(true)}
+          className="press flex size-11 items-center justify-center rounded-xl text-muted hover:bg-chip"
+        >
+          <Pencil />
+        </button>
+        <button
+          type="button"
+          aria-label={`Supprimer le projet ${task.title}`}
+          onClick={() => setDeleting(true)}
+          className="press flex size-11 items-center justify-center rounded-xl text-muted hover:bg-chip"
+        >
+          <Trash />
+        </button>
+      </div>
+      <ProjectFunnel open={editing} onClose={() => setEditing(false)} task={task} />
       <ConfirmDeleteProject open={deleting} task={task} onCancel={() => setDeleting(false)} onDone={() => setDeleting(false)} />
     </motion.div>
   );
