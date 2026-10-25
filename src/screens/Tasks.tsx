@@ -1,22 +1,26 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { useGame, snapshot } from '../store/game';
-import { findUndoable, isDone, previewGains, type Step, type Task } from '../game/engine';
+import { findUndoable, isDone, previewGains, type Task } from '../game/engine';
 import { RECURRENCE_LABEL, dayKey, nextChain, regularityBonus } from '../game/rules';
 import { RARITY_UI, fmt } from '../game/rarity';
 import { TASK_SUGGESTIONS } from '../game/defaults';
-import { Check } from '../components/icons';
+import { Check, Pencil, Trash } from '../components/icons';
 import { Button } from '../components/ui';
 import { RarityChip, TaskForm } from './TaskForm';
+import { ConfirmDeleteProject, ProjectFunnel } from './ProjectFunnel';
+import { projectHref, projectProgress } from './Project';
+import { STAGE_COLORS } from '../components/stageColors';
 
 type Tab = 'today' | 'recurring' | 'projects';
 
 let handledTick = 0;
+/** Kept across screens, so coming back from a project page lands on the projects again. */
+let lastTab: Tab = 'today';
 
 interface Row {
   key: string;
   task: Task;
-  step?: Step;
   done: boolean;
 }
 
@@ -28,16 +32,11 @@ function vibrate(ms: number) {
   }
 }
 
-function meta(task: Task, step?: Step): string {
+function meta(task: Task): string {
   if (task.kind === 'recurring') {
     const chain = isDone(task) ? task.chain : nextChain(task.recurrence!, dayKey(), task.lastPeriod, task.chain);
     const bonus = Math.round(regularityBonus(chain) * 100);
     return `Récurrente · ${RECURRENCE_LABEL[task.recurrence!]}${bonus ? ` · régularité +${bonus} %` : ''}`;
-  }
-  if (task.kind === 'project') {
-    if (!step) return task.finishedDay ? `Projet terminé · ${task.steps.length} étapes` : '';
-    const n = task.steps.findIndex((s) => s.id === step.id) + 1;
-    return `${task.title} · étape ${n}/${task.steps.length}`;
   }
   return '';
 }
@@ -46,21 +45,21 @@ function TaskCard({ row, onEdit }: { row: Row; onEdit: (t: Task) => void }) {
   const state = useGame();
   const { complete, undo } = state;
   const [float, setFloat] = useState<{ id: number; text: string } | null>(null);
-  const { task, step, done } = row;
-  const rarity = step?.rarity ?? task.rarity;
+  const { task, done } = row;
+  const rarity = task.rarity;
   const ui = RARITY_UI[rarity];
   const today = dayKey();
   const s = snapshot(state);
-  const undoable = done && !!findUndoable(s, task.id, step?.id, today);
-  const gains = previewGains(s, task, step?.id, today);
-  const title = step ? step.title : task.title;
+  const undoable = done && !!findUndoable(s, task.id, undefined, today);
+  const gains = previewGains(s, task, undefined, today);
+  const title = task.title;
 
   const toggle = () => {
     if (done) {
-      if (undoable && undo(task.id, step?.id)) vibrate(10);
+      if (undoable && undo(task.id)) vibrate(10);
       return;
     }
-    const r = complete(task.id, step?.id);
+    const r = complete(task.id);
     if (r) {
       vibrate(25);
       setFloat({ id: Date.now(), text: `+${fmt(r.xp)} XP` });
@@ -103,7 +102,7 @@ function TaskCard({ row, onEdit }: { row: Row; onEdit: (t: Task) => void }) {
       </motion.button>
       <button type="button" className="flex min-w-0 grow flex-col gap-1 text-left" onClick={() => onEdit(task)} aria-label={`Modifier ${task.title}`}>
         <span className={`text-base font-extrabold ${done ? 'line-through' : ''}`}>{title}</span>
-        {meta(task, step) && <span className="text-xs font-semibold text-muted">{meta(task, step)}</span>}
+        {meta(task) && <span className="text-xs font-semibold text-muted">{meta(task)}</span>}
         <span className="flex items-center gap-1.5">
           <RarityChip rarity={rarity} />
           {!done && (
@@ -131,43 +130,98 @@ function TaskCard({ row, onEdit }: { row: Row; onEdit: (t: Task) => void }) {
   );
 }
 
-function ProjectCard({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
-  const done = task.steps.filter((s) => s.doneDay).length;
-  const pct = task.steps.length ? (done / task.steps.length) * 100 : 0;
-  const today = dayKey();
-  const rows: Row[] = task.steps.map((s) => ({ key: s.id, task, step: s, done: !!s.doneDay }));
+function ProjectCard({ task }: { task: Task }) {
+  const { done, total, pct, stageIndex, current } = projectProgress(task);
+  const color = STAGE_COLORS[Math.max(0, stageIndex) % STAGE_COLORS.length];
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
   return (
-    <section className="flex flex-col gap-3 rounded-3xl bg-white/60 p-3">
-      <button type="button" onClick={() => onEdit(task)} className="flex flex-col gap-2 px-1 text-left">
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-display text-lg font-bold">{task.title}</span>
-          <span className="font-display text-sm font-semibold text-muted">
-            {done}/{task.steps.length}
+    <motion.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative min-w-0">
+      <motion.a
+        href={projectHref(task.id)}
+        whileTap={{ scale: 0.98 }}
+        className="flex h-full flex-col gap-3 rounded-3xl bg-white p-4 text-ink no-underline shadow-card"
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl text-2xl" style={{ background: color.soft }} aria-hidden>
+            {task.emoji ?? '🧱'}
+          </span>
+          <div className="flex min-w-0 grow flex-col">
+            <span className="truncate font-display text-lg font-bold">{task.title}</span>
+            <span className="text-xs font-semibold text-muted">
+              {task.finishedDay ? 'Terminé 🏆' : `Étape ${stageIndex + 1}/${task.stages.length} · ${task.stages[stageIndex]?.title ?? ''}`}
+            </span>
+          </div>
+          {/* Room for the edit and delete buttons, which sit over the card: a button can't live inside a link. */}
+          <span className="mr-[5.5rem] shrink-0 font-display text-sm font-semibold text-muted">
+            {done}/{total}
           </span>
         </div>
         <div className="h-2.5 overflow-hidden rounded-full bg-indigo-soft">
-          <motion.div className="h-full rounded-full bg-indigo" initial={false} animate={{ width: `${pct}%` }} transition={{ type: 'spring', damping: 16 }} />
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: task.finishedDay ? 'var(--color-mint)' : color.main }}
+            initial={false}
+            animate={{ width: `${pct}%` }}
+            transition={{ type: 'spring', damping: 16 }}
+          />
         </div>
-        <span className="text-xs font-semibold text-muted">
-          {task.finishedDay
-            ? `Terminé ! ${fmt(task.projectEclats)} éclats gagnés au total.`
-            : 'Chaque étape rapporte plus que la précédente. Bonus final : +50 %.'}
+        {/* A glimpse of the path: one dot per task, grouped by stage. */}
+        <div className="flex flex-wrap items-center gap-1.5" aria-hidden>
+          {task.stages.map((g, gi) => (
+            <span key={g.id} className="flex flex-wrap items-center gap-1">
+              {gi > 0 && <span className="mx-0.5 h-0.5 w-2 rounded-full bg-line" />}
+              {task.steps
+                .filter((x) => x.stageId === g.id)
+                .map((x) => (
+                  <span
+                    key={x.id}
+                    className={`size-2.5 rounded-full ${x.id === current?.id ? 'ring-2 ring-offset-1' : ''}`}
+                    style={{ background: x.doneDay ? STAGE_COLORS[gi % STAGE_COLORS.length].main : 'var(--color-line)', ['--tw-ring-color' as string]: color.main }}
+                  />
+                ))}
+            </span>
+          ))}
+        </div>
+        <span className="text-sm font-semibold text-muted">
+          {task.finishedDay ? `${fmt(task.projectEclats)} éclats gagnés sur ce chemin.` : current ? `Prochaine : ${current.title}` : ''}
         </span>
-      </button>
-      {rows.map((r) => (
-        <TaskCard key={r.key} row={r} onEdit={onEdit} />
-      ))}
-      {task.finishedDay === today && <span className="sr-only">Projet terminé aujourd'hui</span>}
-    </section>
+      </motion.a>
+      <div className="absolute top-[18px] right-3 flex">
+        <button
+          type="button"
+          aria-label={`Modifier le projet ${task.title}`}
+          onClick={() => setEditing(true)}
+          className="press flex size-11 items-center justify-center rounded-xl text-muted hover:bg-chip"
+        >
+          <Pencil />
+        </button>
+        <button
+          type="button"
+          aria-label={`Supprimer le projet ${task.title}`}
+          onClick={() => setDeleting(true)}
+          className="press flex size-11 items-center justify-center rounded-xl text-muted hover:bg-chip"
+        >
+          <Trash />
+        </button>
+      </div>
+      <ProjectFunnel open={editing} onClose={() => setEditing(false)} task={task} />
+      <ConfirmDeleteProject open={deleting} task={task} onCancel={() => setDeleting(false)} onDone={() => setDeleting(false)} />
+    </motion.div>
   );
 }
 
 export function TasksScreen() {
   const state = useGame();
   const { tasks, completions, addTask, showToast } = state;
-  const [tab, setTab] = useState<Tab>('today');
+  const [tab, setTabState] = useState<Tab>(lastTab);
   const [editing, setEditing] = useState<Task | undefined>();
   const [formOpen, setFormOpen] = useState(false);
+  const [funnelOpen, setFunnelOpen] = useState(false);
+  const setTab = (t: Tab) => {
+    lastTab = t;
+    setTabState(t);
+  };
   const today = dayKey();
   const newTaskTick = useGame((st) => st.newTaskTick);
 
@@ -176,7 +230,8 @@ export function TasksScreen() {
     if (newTaskTick !== handledTick) {
       handledTick = newTaskTick;
       setEditing(undefined);
-      setFormOpen(true);
+      if (lastTab === 'projects') setFunnelOpen(true);
+      else setFormOpen(true);
     }
   }, [newTaskTick]);
 
@@ -200,11 +255,8 @@ export function TasksScreen() {
       } else if (t.kind === 'recurring') {
         const done = isDone(t, today);
         if (!done || doneToday.has(t.id)) out.push({ key: t.id, task: t, done });
-      } else {
-        for (const s of t.steps) if (s.doneDay === today) out.push({ key: s.id, task: t, step: s, done: true });
-        const next = t.steps.find((s) => !s.doneDay);
-        if (next) out.push({ key: next.id, task: t, step: next, done: false });
       }
+      // Project tasks live on their own path, in the Projets tab.
     }
     // To-do first, done at the bottom.
     return [...out.filter((r) => !r.done), ...out.filter((r) => r.done)];
@@ -213,7 +265,8 @@ export function TasksScreen() {
   const projects = tasks.filter((t) => t.kind === 'project');
   const openForm = (t?: Task) => {
     setEditing(t);
-    setFormOpen(true);
+    if (!t && tab === 'projects') setFunnelOpen(true);
+    else setFormOpen(true);
   };
   const allDone = tab === 'today' && rows.length > 0 && rows.every((r) => r.done);
   const empty = tab === 'projects' ? projects.length === 0 : rows.length === 0;
@@ -263,7 +316,7 @@ export function TasksScreen() {
           </div>
           <p className="max-w-xs text-sm font-medium text-muted">
             {tab === 'projects'
-              ? 'Découpe un gros objectif en étapes : chaque étape rapporte un peu plus, et la fin est une vraie fête.'
+              ? 'Transforme un gros objectif en chemin : des étapes, des tâches dedans, et une vraie fête à l’arrivée.'
               : tab === 'recurring'
                 ? 'Les tâches qui reviennent chaque jour, semaine ou mois gagnent un bonus de régularité.'
                 : 'Ajoute ta première tâche, ou pioche une idée\u00a0:'}
@@ -288,7 +341,21 @@ export function TasksScreen() {
           <Button onClick={() => openForm()}>{tab === 'projects' ? 'Créer un projet' : 'Ajouter une tâche'}</Button>
         </div>
       ) : tab === 'projects' ? (
-        projects.map((p) => <ProjectCard key={p.id} task={p} onEdit={openForm} />)
+        <div className="grid gap-3 sm:grid-cols-2">
+          {projects.map((p) => (
+            <ProjectCard key={p.id} task={p} />
+          ))}
+          <button
+            type="button"
+            onClick={() => openForm()}
+            className="press flex min-h-32 flex-col items-center justify-center gap-1 rounded-3xl border-2 border-dashed border-line font-display text-[15px] font-semibold text-muted"
+          >
+            <span className="text-2xl" aria-hidden>
+              +
+            </span>
+            Nouveau projet
+          </button>
+        </div>
       ) : (
         <AnimatePresence initial={false}>
           {rows.map((r) => (
@@ -301,8 +368,13 @@ export function TasksScreen() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         task={editing}
-        defaultKind={tab === 'projects' ? 'project' : tab === 'recurring' ? 'recurring' : 'normal'}
+        defaultKind={tab === 'recurring' ? 'recurring' : 'normal'}
+        onProject={() => {
+          setFormOpen(false);
+          setFunnelOpen(true);
+        }}
       />
+      <ProjectFunnel open={funnelOpen} onClose={() => setFunnelOpen(false)} onCreated={(id) => (window.location.hash = projectHref(id))} />
     </div>
   );
 }

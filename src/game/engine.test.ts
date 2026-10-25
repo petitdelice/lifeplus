@@ -7,6 +7,8 @@ import {
   enjoyReward,
   gambleReward,
   initialState,
+  migrateState,
+  updateTask,
   refreshDay,
   sellReward,
   spendTicket,
@@ -209,5 +211,80 @@ describe('shop', () => {
     expect(buyFreeze(s).error).toBeTruthy();
     expect(s.streak.freezes).toBe(2);
     expect(s.eclats).toBe(880);
+  });
+});
+
+describe('project paths', () => {
+  const path = {
+    title: 'Cuisine',
+    kind: 'project' as const,
+    duration: 3,
+    flemme: 3,
+    stages: [
+      { title: 'Préparer', tasks: [{ title: 'Vider', duration: 2, flemme: 2 }, { title: 'Acheter', duration: 2, flemme: 2 }] },
+      { title: '', tasks: [{ title: 'Peindre', duration: 3, flemme: 3 }] },
+      { title: 'Vide', tasks: [{ title: '  ', duration: 1, flemme: 1 }] },
+    ],
+  };
+
+  it('keeps stages in order, names unnamed ones and drops empty ones', () => {
+    const { t } = withTask(initialState(D0), path);
+    expect(t.stages.map((g) => g.title)).toEqual(['Préparer', 'Étape 2']);
+    expect(t.steps.map((s) => s.title)).toEqual(['Vider', 'Acheter', 'Peindre']);
+    expect(t.steps.map((s) => t.stages.findIndex((g) => g.id === s.stageId))).toEqual([0, 0, 1]);
+  });
+
+  it('celebrates a finished stage, then the whole project', () => {
+    let { s, t } = withTask(initialState(D0), path);
+    let r = completeTask(s, t.id, t.steps[0].id, D0)!;
+    expect(r.events.some((e) => e.type === 'stage')).toBe(false);
+    r = completeTask(r.state, t.id, t.steps[1].id, D0)!;
+    expect(r.events.find((e) => e.type === 'stage')).toMatchObject({ title: 'Préparer', index: 0, total: 2 });
+    r = completeTask(r.state, t.id, t.steps[2].id, D0)!;
+    expect(r.events.some((e) => e.type === 'stage')).toBe(false);
+    expect(r.events.some((e) => e.type === 'project')).toBe(true);
+    s = r.state;
+    expect(s.tasks[0].finishedDay).toBe(D0);
+  });
+
+  it('editing keeps done tasks done', () => {
+    const { s, t } = withTask(initialState(D0), path);
+    const done = completeTask(s, t.id, t.steps[0].id, D0)!.state;
+    const p = done.tasks[0];
+    const edited = updateTask(done, p.id, {
+      ...path,
+      stages: [
+        { id: p.stages[0].id, title: 'Avant', tasks: p.steps.slice(0, 2) },
+        { title: 'Nouvelle', tasks: [{ title: 'Ranger', duration: 1, flemme: 1 }] },
+      ],
+    }).tasks[0];
+    expect(edited.stages.map((g) => g.title)).toEqual(['Avant', 'Nouvelle']);
+    expect(edited.steps[0].doneDay).toBe(D0);
+    expect(edited.steps.at(-1)!.doneDay).toBeUndefined();
+  });
+
+  it('migrates old flat projects into one stage without losing progress', () => {
+    const { s, t } = withTask(initialState(D0), { ...path, stages: undefined, steps: path.stages[0].tasks });
+    const r = completeTask(s, t.id, t.steps[0].id, D0)!;
+    // What a save from before project paths looked like.
+    const strip = (task: (typeof r.state.tasks)[0]) => {
+      const { stages: _, ...rest } = task;
+      return { ...rest, steps: task.steps.map(({ stageId: __, ...st }) => st) };
+    };
+    const old = {
+      ...r.state,
+      tasks: r.state.tasks.map(strip),
+      completions: r.state.completions.map((c) => ({ ...c, prevTask: strip(c.prevTask) })),
+    } as unknown as GameState;
+    const m = migrateState(old);
+    const p = m.tasks[0];
+    expect(p.stages).toHaveLength(1);
+    expect(p.steps.every((st) => st.stageId === p.stages[0].id)).toBe(true);
+    expect(p.steps[0].doneDay).toBe(D0);
+    expect(m.eclats).toBe(r.state.eclats);
+    expect(m.completions[0].prevTask.stages).toHaveLength(1);
+    // Unticking restores a task that still has its stage.
+    expect(undoTask(m, p.id, p.steps[0].id, D0)!.tasks[0].stages).toHaveLength(1);
+    expect(migrateState(m)).toEqual(m);
   });
 });

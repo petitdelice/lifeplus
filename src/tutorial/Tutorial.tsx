@@ -65,7 +65,7 @@ const STEPS: StepDef[] = [
     body: (
       <p>
         Les <b>simples</b>, à faire une fois. Les <b>récurrentes</b>, chaque jour, semaine ou mois, avec un bonus de régularité jusqu’à +50 %. Et les{' '}
-        <b>projets</b>, découpés en étapes : chacune rapporte plus que la précédente, et la fin ajoute +50 %.
+        <b>projets</b>, de vrais chemins : des étapes avec leurs tâches, chacune rapporte plus que la précédente, et l’arrivée ajoute +50 %.
       </p>
     ),
   },

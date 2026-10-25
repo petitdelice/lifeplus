@@ -129,10 +129,11 @@ export function Confirm({
             <div className="font-display text-xl font-bold">{title}</div>
             {children}
             <div className="flex gap-2.5">
-              <Button tone="soft" className="flex-1" onClick={onCancel}>
+              {/* For a deletion, Enter cancels: the destructive choice always takes a deliberate tap. */}
+              <Button tone="soft" className="flex-1" onClick={onCancel} autoFocus={danger}>
                 Annuler
               </Button>
-              <Button tone="indigo" className={`flex-1 ${danger ? '!bg-r-mythique !shadow-[0_3px_0_#7A0C3E]' : ''}`} onClick={onConfirm} autoFocus>
+              <Button tone="indigo" className={`flex-1 ${danger ? '!bg-r-mythique !shadow-[0_3px_0_#7A0C3E]' : ''}`} onClick={onConfirm} autoFocus={!danger}>
                 {confirmLabel}
               </Button>
             </div>

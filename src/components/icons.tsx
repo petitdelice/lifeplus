@@ -91,3 +91,9 @@ export const Trash = ({ size = 18, ...p }: P) => (
     <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
+
+export const Pencil = ({ size = 18, ...p }: P) => (
+  <svg {...svg(size, p)}>
+    <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);

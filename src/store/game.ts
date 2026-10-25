@@ -132,13 +132,15 @@ export const useGame = create<Store>()(
         shiftEvent: () => set({ events: get().events.slice(1) }),
         pushEvents: (events) => set({ events: [...get().events, ...events] }),
         showToast: (text, kind = 'good') => set({ toast: { id: ++toastId, text, kind } }),
-        importData: (data) => set({ ...E.initialState(), ...data, events: [] }),
+        importData: (data) => set({ ...E.migrateState({ ...E.initialState(), ...data }), events: [] }),
         resetAll: () => set({ ...E.initialState(), events: [], toast: null }),
       };
     },
     {
       name: SAVE_KEY,
-      version: 1,
+      // v2: projects became paths of stages. Older saves are migrated, never reset.
+      version: 2,
+      migrate: (persisted) => E.migrateState({ ...E.initialState(), ...(persisted as GameState) }),
       storage: createJSONStorage(() => ({
         getItem: (k) => localStorage.getItem(k),
         setItem: (k, v) => {
