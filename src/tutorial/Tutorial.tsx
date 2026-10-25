@@ -106,7 +106,7 @@ const STEPS: StepDef[] = [
     title: 'Tenter ta chance',
     body: (
       <p>
-        Le Gamble coûte moitié prix, avec 20 % de chance de gagner. Après 8 essais sans chance, un ticket d’or t’est offert. Plus bas, le gel de streak
+        Le Gamble coûte moitié prix : si la chance te sourit, le plaisir est à toi. Après 8 essais sans chance, un ticket d’or t’est offert. Plus bas, le gel de streak
         protège ta flamme un jour sans tâche.
       </p>
     ),
