@@ -24,12 +24,14 @@ export function TaskForm({
   onClose,
   task,
   defaultKind = 'normal',
+  defaultRecurrence = 'daily',
   onProject,
 }: {
   open: boolean;
   onClose: () => void;
   task?: Task;
   defaultKind?: TaskKind;
+  defaultRecurrence?: Recurrence;
   /** Projects have their own longer form: picking the type hands over to it. */
   onProject: () => void;
 }) {
@@ -46,12 +48,12 @@ export function TaskForm({
     if (!open) return;
     setTitle(task?.title ?? '');
     setKind(task?.kind ?? defaultKind);
-    setRecurrence(task?.recurrence ?? 'daily');
+    setRecurrence(task?.recurrence ?? defaultRecurrence);
     setDuration(task?.duration ?? 2);
     setFlemme(task?.flemme ?? 2);
     const suggested = task ? rarityFromScore(task.duration, task.flemme) : null;
     setRarity(task && task.rarity !== suggested ? task.rarity : null);
-  }, [open, task, defaultKind]);
+  }, [open, task, defaultKind, defaultRecurrence]);
 
   const suggested = rarityFromScore(duration, flemme);
   const allowed = allowedRarities(suggested);

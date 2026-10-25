@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { useGame, snapshot } from '../store/game';
 import { findUndoable, isDone, previewGains, type Task } from '../game/engine';
-import { RECURRENCE_LABEL, dayKey, nextChain, regularityBonus } from '../game/rules';
+import { RECURRENCE_LABEL, dayKey, nextChain, regularityBonus, type Recurrence } from '../game/rules';
 import { RARITY_UI, fmt } from '../game/rarity';
 import { TASK_SUGGESTIONS } from '../game/defaults';
 import { Check, Pencil, Trash } from '../components/icons';
@@ -15,10 +15,15 @@ import { ProjectsIntro, projectsIntroDone } from '../tutorial/ProjectsIntro';
 import { useTuto } from '../tutorial/store';
 
 type Tab = 'today' | 'recurring' | 'projects';
+type RecFilter = 'all' | Recurrence;
+
+const REC_ORDER: Recurrence[] = ['daily', 'weekly', 'monthly'];
+const REC_FILTER_LABEL: Record<RecFilter, string> = { all: 'Toutes', daily: 'Jour', weekly: 'Semaine', monthly: 'Mois' };
 
 let handledTick = 0;
 /** Kept across screens, so coming back from a project page lands on the projects again. */
 let lastTab: Tab = 'today';
+let lastRecFilter: RecFilter = 'all';
 
 interface Row {
   key: string;
@@ -34,16 +39,18 @@ function vibrate(ms: number) {
   }
 }
 
-function meta(task: Task): string {
+function meta(task: Task, grouped: boolean): string {
   if (task.kind === 'recurring') {
     const chain = isDone(task) ? task.chain : nextChain(task.recurrence!, dayKey(), task.lastPeriod, task.chain);
     const bonus = Math.round(regularityBonus(chain) * 100);
+    // Under a "Chaque jour / semaine / mois" divider, repeating the frequency on each card is noise.
+    if (grouped) return bonus ? `Régularité +${bonus} %` : '';
     return `Récurrente · ${RECURRENCE_LABEL[task.recurrence!]}${bonus ? ` · régularité +${bonus} %` : ''}`;
   }
   return '';
 }
 
-function TaskCard({ row, onEdit }: { row: Row; onEdit: (t: Task) => void }) {
+function TaskCard({ row, onEdit, grouped = false }: { row: Row; onEdit: (t: Task) => void; grouped?: boolean }) {
   const state = useGame();
   const { complete, undo } = state;
   const [float, setFloat] = useState<{ id: number; text: string } | null>(null);
@@ -55,6 +62,7 @@ function TaskCard({ row, onEdit }: { row: Row; onEdit: (t: Task) => void }) {
   const undoable = done && !!findUndoable(s, task.id, undefined, today);
   const gains = previewGains(s, task, undefined, today);
   const title = task.title;
+  const info = meta(task, grouped);
 
   const toggle = () => {
     if (done) {
@@ -104,7 +112,7 @@ function TaskCard({ row, onEdit }: { row: Row; onEdit: (t: Task) => void }) {
       </motion.button>
       <button type="button" className="flex min-w-0 grow flex-col gap-1 text-left" onClick={() => onEdit(task)} aria-label={`Modifier ${task.title}`}>
         <span className={`text-base font-extrabold ${done ? 'line-through' : ''}`}>{title}</span>
-        {meta(task) && <span className="text-xs font-semibold text-muted">{meta(task)}</span>}
+        {info && <span className="text-xs font-semibold text-muted">{info}</span>}
         <span className="flex items-center gap-1.5">
           <RarityChip rarity={rarity} />
           {!done && (
@@ -221,6 +229,7 @@ export function TasksScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [funnelOpen, setFunnelOpen] = useState(false);
   const [introOpen, setIntroOpen] = useState(false);
+  const [recFilterState, setRecFilterState] = useState<RecFilter>(lastRecFilter);
   const inTuto = useTuto((st) => st.active);
   const setTab = (t: Tab) => {
     lastTab = t;
@@ -270,6 +279,19 @@ export function TasksScreen() {
     // To-do first, done at the bottom.
     return [...out.filter((r) => !r.done), ...out.filter((r) => r.done)];
   }, [tasks, tab, today, doneToday]);
+
+  // Récurrentes: one block per frequency, in the day > week > month order. Empty frequencies are left out.
+  const groups = useMemo(
+    () => (tab === 'recurring' ? REC_ORDER.map((rec) => ({ rec, rows: rows.filter((r) => r.task.recurrence === rec) })).filter((g) => g.rows.length > 0) : []),
+    [rows, tab],
+  );
+  // A filter on a frequency that no longer has tasks (all deleted) falls back to everything.
+  const recFilter = recFilterState !== 'all' && !groups.some((g) => g.rec === recFilterState) ? 'all' : recFilterState;
+  const setRecFilter = (f: RecFilter) => {
+    lastRecFilter = f;
+    setRecFilterState(f);
+  };
+  const shownGroups = recFilter === 'all' ? groups : groups.filter((g) => g.rec === recFilter);
 
   const projects = tasks.filter((t) => t.kind === 'project');
   const openForm = (t?: Task) => {
@@ -365,6 +387,48 @@ export function TasksScreen() {
             Nouveau projet
           </button>
         </div>
+      ) : tab === 'recurring' ? (
+        <>
+          {/* Filtering only helps once there is more than one frequency to choose from. */}
+          {groups.length > 1 && (
+            <div className="flex gap-1.5 overflow-x-auto pb-1 sm:gap-2" role="group" aria-label="Filtrer par fréquence">
+              {(['all', ...groups.map((g) => g.rec)] as RecFilter[]).map((f) => {
+                const on = recFilter === f;
+                const count = f === 'all' ? rows.length : groups.find((g) => g.rec === f)!.rows.length;
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setRecFilter(f)}
+                    className={`press flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3 text-sm sm:px-3.5 font-bold transition-colors ${
+                      on ? 'border-indigo bg-indigo-soft text-indigo' : 'border-line bg-white text-muted'
+                    }`}
+                  >
+                    {REC_FILTER_LABEL[f]}
+                    <span className={`text-xs ${on ? 'text-indigo/70' : 'text-muted/70'}`}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {shownGroups.map((g) => (
+            <section key={g.rec} className="flex flex-col gap-3" aria-label={`Tâches ${RECURRENCE_LABEL[g.rec]}`}>
+              <div className="flex items-center gap-3 pt-1">
+                <h2 className="font-display text-sm font-semibold text-ink first-letter:uppercase">{RECURRENCE_LABEL[g.rec]}</h2>
+                <span className="h-px grow bg-line" aria-hidden />
+                <span className="text-xs font-bold text-muted">
+                  {g.rows.filter((r) => r.done).length}/{g.rows.length} faite{g.rows.filter((r) => r.done).length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <AnimatePresence initial={false}>
+                {g.rows.map((r) => (
+                  <TaskCard key={r.key} row={r} onEdit={openForm} grouped />
+                ))}
+              </AnimatePresence>
+            </section>
+          ))}
+        </>
       ) : (
         <AnimatePresence initial={false}>
           {rows.map((r) => (
@@ -384,6 +448,7 @@ export function TasksScreen() {
         onClose={() => setFormOpen(false)}
         task={editing}
         defaultKind={tab === 'recurring' ? 'recurring' : 'normal'}
+        defaultRecurrence={tab === 'recurring' && recFilter !== 'all' ? recFilter : 'daily'}
         onProject={() => {
           setFormOpen(false);
           setFunnelOpen(true);
