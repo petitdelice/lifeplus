@@ -128,12 +128,29 @@ export function ProjectScreen({ id }: { id: string }) {
   const [float, setFloat] = useState<{ stepId: string; text: string } | null>(null);
 
   const [away, setAway] = useState<'up' | 'down' | null>(null);
+  const [landed, setLanded] = useState(false);
   const currentId = task && currentStep(task)?.id;
 
   // Land on the task to do: once the path has popped in, glide down to it.
   useEffect(() => {
-    const t = setTimeout(scrollToCurrent, 450);
-    return () => clearTimeout(t);
+    setLanded(false);
+    let done: ReturnType<typeof setTimeout>;
+    const land = () => {
+      clearTimeout(done);
+      window.removeEventListener('scrollend', land);
+      setLanded(true);
+    };
+    const t = setTimeout(() => {
+      scrollToCurrent();
+      // The "Tâche en cours" button waits until this first glide is over.
+      window.addEventListener('scrollend', land);
+      done = setTimeout(land, 1200);
+    }, 450);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(done);
+      window.removeEventListener('scrollend', land);
+    };
   }, [id]);
 
   // When the current task is off screen, a button brings it back.
@@ -335,7 +352,7 @@ export function ProjectScreen({ id }: { id: string }) {
       </Sheet>
 
       <AnimatePresence>
-        {away && (
+        {away && landed && (
           <motion.button
             type="button"
             onClick={scrollToCurrent}
