@@ -125,12 +125,12 @@ function MiniCard() {
     >
       <div className="flex items-center gap-2">
         <span className="text-xl">🎸</span>
-        <span className="grow font-display text-sm font-bold">Apprendre la guitare</span>
+        <span className="grow font-display text-sm font-bold whitespace-nowrap">Apprendre la guitare</span>
         <span className="flex text-muted">
-          <motion.span className="flex size-7 items-center justify-center rounded-lg" animate={{ backgroundColor: ['#ECEBFE00', '#ECEBFE', '#ECEBFE00'] }} transition={{ repeat: Infinity, duration: 2.2, delay: 0.6 }}>
+          <motion.span className="flex size-6 items-center justify-center rounded-lg" animate={{ backgroundColor: ['#ECEBFE00', '#ECEBFE', '#ECEBFE00'] }} transition={{ repeat: Infinity, duration: 2.2, delay: 0.6 }}>
             <Pencil size={15} />
           </motion.span>
-          <motion.span className="flex size-7 items-center justify-center rounded-lg" animate={{ backgroundColor: ['#ECEBFE00', '#ECEBFE', '#ECEBFE00'] }} transition={{ repeat: Infinity, duration: 2.2, delay: 1.7 }}>
+          <motion.span className="flex size-6 items-center justify-center rounded-lg" animate={{ backgroundColor: ['#ECEBFE00', '#ECEBFE', '#ECEBFE00'] }} transition={{ repeat: Infinity, duration: 2.2, delay: 1.7 }}>
             <Trash size={15} />
           </motion.span>
         </span>
@@ -214,7 +214,7 @@ export function ProjectsIntro({ open, onClose, onCreate }: { open: boolean; onCl
               exit={{ opacity: 0, x: -24 }}
               transition={{ duration: 0.18 }}
             >
-              <div className="flex h-48 w-full items-center justify-center rounded-2xl bg-bg px-4">{slide.art}</div>
+              <div className="flex h-48 w-full items-center justify-center rounded-2xl bg-bg px-3">{slide.art}</div>
               <h2 className="font-display text-xl font-bold">{slide.title}</h2>
               <p className="min-h-[6.5rem] text-[15px] leading-relaxed font-medium text-muted [&_b]:text-ink">{slide.body}</p>
             </motion.div>
