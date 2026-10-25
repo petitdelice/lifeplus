@@ -5,10 +5,10 @@ import { findUndoable, isDone, previewGains, type Task } from '../game/engine';
 import { RECURRENCE_LABEL, dayKey, nextChain, regularityBonus } from '../game/rules';
 import { RARITY_UI, fmt } from '../game/rarity';
 import { TASK_SUGGESTIONS } from '../game/defaults';
-import { Check } from '../components/icons';
+import { Check, Trash } from '../components/icons';
 import { Button } from '../components/ui';
 import { RarityChip, TaskForm } from './TaskForm';
-import { ProjectFunnel } from './ProjectFunnel';
+import { ConfirmDeleteProject, ProjectFunnel } from './ProjectFunnel';
 import { projectHref, projectProgress } from './Project';
 import { STAGE_COLORS } from '../components/stageColors';
 
@@ -133,59 +133,69 @@ function TaskCard({ row, onEdit }: { row: Row; onEdit: (t: Task) => void }) {
 function ProjectCard({ task }: { task: Task }) {
   const { done, total, pct, stageIndex, current } = projectProgress(task);
   const color = STAGE_COLORS[Math.max(0, stageIndex) % STAGE_COLORS.length];
+  const [deleting, setDeleting] = useState(false);
   return (
-    <motion.a
-      layout
-      href={projectHref(task.id)}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileTap={{ scale: 0.98 }}
-      className="flex flex-col gap-3 rounded-3xl bg-white p-4 text-ink no-underline shadow-card"
-    >
-      <div className="flex items-center gap-3">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl text-2xl" style={{ background: color.soft }} aria-hidden>
-          {task.emoji ?? '🧱'}
-        </span>
-        <div className="flex min-w-0 grow flex-col">
-          <span className="truncate font-display text-lg font-bold">{task.title}</span>
-          <span className="text-xs font-semibold text-muted">
-            {task.finishedDay ? 'Terminé 🏆' : `Étape ${stageIndex + 1}/${task.stages.length} · ${task.stages[stageIndex]?.title ?? ''}`}
+    <motion.div layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative min-w-0">
+      <motion.a
+        href={projectHref(task.id)}
+        whileTap={{ scale: 0.98 }}
+        className="flex h-full flex-col gap-3 rounded-3xl bg-white p-4 text-ink no-underline shadow-card"
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl text-2xl" style={{ background: color.soft }} aria-hidden>
+            {task.emoji ?? '🧱'}
+          </span>
+          <div className="flex min-w-0 grow flex-col">
+            <span className="truncate font-display text-lg font-bold">{task.title}</span>
+            <span className="text-xs font-semibold text-muted">
+              {task.finishedDay ? 'Terminé 🏆' : `Étape ${stageIndex + 1}/${task.stages.length} · ${task.stages[stageIndex]?.title ?? ''}`}
+            </span>
+          </div>
+          {/* Room for the delete button, which sits over the card: a button can't live inside a link. */}
+          <span className="mr-10 shrink-0 font-display text-sm font-semibold text-muted">
+            {done}/{total}
           </span>
         </div>
-        <span className="shrink-0 font-display text-sm font-semibold text-muted">
-          {done}/{total}
+        <div className="h-2.5 overflow-hidden rounded-full bg-indigo-soft">
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: task.finishedDay ? 'var(--color-mint)' : color.main }}
+            initial={false}
+            animate={{ width: `${pct}%` }}
+            transition={{ type: 'spring', damping: 16 }}
+          />
+        </div>
+        {/* A glimpse of the path: one dot per task, grouped by stage. */}
+        <div className="flex flex-wrap items-center gap-1.5" aria-hidden>
+          {task.stages.map((g, gi) => (
+            <span key={g.id} className="flex flex-wrap items-center gap-1">
+              {gi > 0 && <span className="mx-0.5 h-0.5 w-2 rounded-full bg-line" />}
+              {task.steps
+                .filter((x) => x.stageId === g.id)
+                .map((x) => (
+                  <span
+                    key={x.id}
+                    className={`size-2.5 rounded-full ${x.id === current?.id ? 'ring-2 ring-offset-1' : ''}`}
+                    style={{ background: x.doneDay ? STAGE_COLORS[gi % STAGE_COLORS.length].main : 'var(--color-line)', ['--tw-ring-color' as string]: color.main }}
+                  />
+                ))}
+            </span>
+          ))}
+        </div>
+        <span className="text-sm font-semibold text-muted">
+          {task.finishedDay ? `${fmt(task.projectEclats)} éclats gagnés sur ce chemin.` : current ? `Prochaine : ${current.title}` : ''}
         </span>
-      </div>
-      <div className="h-2.5 overflow-hidden rounded-full bg-indigo-soft">
-        <motion.div
-          className="h-full rounded-full"
-          style={{ background: task.finishedDay ? 'var(--color-mint)' : color.main }}
-          initial={false}
-          animate={{ width: `${pct}%` }}
-          transition={{ type: 'spring', damping: 16 }}
-        />
-      </div>
-      {/* A glimpse of the path: one dot per task, grouped by stage. */}
-      <div className="flex flex-wrap items-center gap-1.5" aria-hidden>
-        {task.stages.map((g, gi) => (
-          <span key={g.id} className="flex items-center gap-1">
-            {gi > 0 && <span className="mx-0.5 h-0.5 w-2 rounded-full bg-line" />}
-            {task.steps
-              .filter((x) => x.stageId === g.id)
-              .map((x) => (
-                <span
-                  key={x.id}
-                  className={`size-2.5 rounded-full ${x.id === current?.id ? 'ring-2 ring-offset-1' : ''}`}
-                  style={{ background: x.doneDay ? STAGE_COLORS[gi % STAGE_COLORS.length].main : 'var(--color-line)', ['--tw-ring-color' as string]: color.main }}
-                />
-              ))}
-          </span>
-        ))}
-      </div>
-      <span className="text-sm font-semibold text-muted">
-        {task.finishedDay ? `${fmt(task.projectEclats)} éclats gagnés sur ce chemin.` : current ? `Prochaine : ${current.title}` : ''}
-      </span>
-    </motion.a>
+      </motion.a>
+      <button
+        type="button"
+        aria-label={`Supprimer le projet ${task.title}`}
+        onClick={() => setDeleting(true)}
+        className="press absolute top-[18px] right-3 flex size-11 items-center justify-center rounded-xl text-muted hover:bg-chip"
+      >
+        <Trash />
+      </button>
+      <ConfirmDeleteProject open={deleting} task={task} onCancel={() => setDeleting(false)} onDone={() => setDeleting(false)} />
+    </motion.div>
   );
 }
 
