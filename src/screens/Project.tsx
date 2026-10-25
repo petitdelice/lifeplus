@@ -27,6 +27,10 @@ export function projectProgress(task: Task) {
   return { done, total: task.steps.length, pct: task.steps.length ? (done / task.steps.length) * 100 : 0, stageIndex, current: cur };
 }
 
+function scrollToCurrent() {
+  document.querySelector('[data-tuto="path-node"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 const dateLabel = (key: string) => parseDay(key).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
 
 function vibrate(ms: number) {
@@ -123,13 +127,33 @@ export function ProjectScreen({ id }: { id: string }) {
   const [editing, setEditing] = useState(false);
   const [float, setFloat] = useState<{ stepId: string; text: string } | null>(null);
 
+  const [away, setAway] = useState<'up' | 'down' | null>(null);
+  const currentId = task && currentStep(task)?.id;
+
   // Land on the task to do: once the path has popped in, glide down to it.
   useEffect(() => {
-    const t = setTimeout(() => {
-      document.querySelector('[data-tuto="path-node"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 450);
+    const t = setTimeout(scrollToCurrent, 450);
     return () => clearTimeout(t);
   }, [id]);
+
+  // When the current task is off screen, a button brings it back.
+  useEffect(() => {
+    if (!currentId) {
+      setAway(null);
+      return;
+    }
+    const check = () => {
+      const r = document.querySelector('[data-tuto="path-node"]')?.getBoundingClientRect();
+      setAway(!r ? null : r.bottom < 60 ? 'up' : r.top > window.innerHeight - 120 ? 'down' : null);
+    };
+    check();
+    window.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check);
+    return () => {
+      window.removeEventListener('scroll', check);
+      window.removeEventListener('resize', check);
+    };
+  }, [currentId]);
 
   if (!task) {
     return (
@@ -309,6 +333,26 @@ export function ProjectScreen({ id }: { id: string }) {
           </div>
         )}
       </Sheet>
+
+      <AnimatePresence>
+        {away && (
+          <motion.button
+            type="button"
+            onClick={scrollToCurrent}
+            initial={{ opacity: 0, y: 16, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.9 }}
+            whileTap={{ scale: 0.94 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 320 }}
+            className="fixed right-4 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-30 flex min-h-11 items-center gap-1.5 rounded-full bg-ink py-2 pr-4 pl-3 font-display text-sm font-semibold text-white shadow-pop md:right-10 md:bottom-32"
+          >
+            <span aria-hidden className="text-base leading-none">
+              {away === 'up' ? '↑' : '↓'}
+            </span>
+            Tâche en cours
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       <ProjectFunnel open={editing} onClose={() => setEditing(false)} task={task} />
     </div>
