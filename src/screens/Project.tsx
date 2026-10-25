@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useGame, snapshot } from '../store/game';
 import { findUndoable, previewGains, type Step, type Task } from '../game/engine';
 import { DURATION_LABELS, FLEMME_LABELS, dayKey, parseDay } from '../game/rules';
@@ -122,6 +122,14 @@ export function ProjectScreen({ id }: { id: string }) {
   const [openStep, setOpenStep] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [float, setFloat] = useState<{ stepId: string; text: string } | null>(null);
+
+  // Land on the task to do: once the path has popped in, glide down to it.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      document.querySelector('[data-tuto="path-node"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 450);
+    return () => clearTimeout(t);
+  }, [id]);
 
   if (!task) {
     return (

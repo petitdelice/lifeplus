@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { useGame, snapshot } from '../store/game';
-import { findUndoable, isDone, previewGains, type Step, type Task } from '../game/engine';
+import { findUndoable, isDone, previewGains, type Task } from '../game/engine';
 import { RECURRENCE_LABEL, dayKey, nextChain, regularityBonus } from '../game/rules';
 import { RARITY_UI, fmt } from '../game/rarity';
 import { TASK_SUGGESTIONS } from '../game/defaults';
@@ -21,7 +21,6 @@ let lastTab: Tab = 'today';
 interface Row {
   key: string;
   task: Task;
-  step?: Step;
   done: boolean;
 }
 
@@ -33,15 +32,11 @@ function vibrate(ms: number) {
   }
 }
 
-function meta(task: Task, step?: Step): string {
+function meta(task: Task): string {
   if (task.kind === 'recurring') {
     const chain = isDone(task) ? task.chain : nextChain(task.recurrence!, dayKey(), task.lastPeriod, task.chain);
     const bonus = Math.round(regularityBonus(chain) * 100);
     return `Récurrente · ${RECURRENCE_LABEL[task.recurrence!]}${bonus ? ` · régularité +${bonus} %` : ''}`;
-  }
-  if (task.kind === 'project' && step) {
-    const stage = task.stages.find((g) => g.id === step.stageId);
-    return `${task.emoji ?? '🧱'} ${task.title} · ${stage?.title ?? ''}`;
   }
   return '';
 }
@@ -50,21 +45,21 @@ function TaskCard({ row, onEdit }: { row: Row; onEdit: (t: Task) => void }) {
   const state = useGame();
   const { complete, undo } = state;
   const [float, setFloat] = useState<{ id: number; text: string } | null>(null);
-  const { task, step, done } = row;
-  const rarity = step?.rarity ?? task.rarity;
+  const { task, done } = row;
+  const rarity = task.rarity;
   const ui = RARITY_UI[rarity];
   const today = dayKey();
   const s = snapshot(state);
-  const undoable = done && !!findUndoable(s, task.id, step?.id, today);
-  const gains = previewGains(s, task, step?.id, today);
-  const title = step ? step.title : task.title;
+  const undoable = done && !!findUndoable(s, task.id, undefined, today);
+  const gains = previewGains(s, task, undefined, today);
+  const title = task.title;
 
   const toggle = () => {
     if (done) {
-      if (undoable && undo(task.id, step?.id)) vibrate(10);
+      if (undoable && undo(task.id)) vibrate(10);
       return;
     }
-    const r = complete(task.id, step?.id);
+    const r = complete(task.id);
     if (r) {
       vibrate(25);
       setFloat({ id: Date.now(), text: `+${fmt(r.xp)} XP` });
@@ -107,7 +102,7 @@ function TaskCard({ row, onEdit }: { row: Row; onEdit: (t: Task) => void }) {
       </motion.button>
       <button type="button" className="flex min-w-0 grow flex-col gap-1 text-left" onClick={() => onEdit(task)} aria-label={`Modifier ${task.title}`}>
         <span className={`text-base font-extrabold ${done ? 'line-through' : ''}`}>{title}</span>
-        {meta(task, step) && <span className="text-xs font-semibold text-muted">{meta(task, step)}</span>}
+        {meta(task) && <span className="text-xs font-semibold text-muted">{meta(task)}</span>}
         <span className="flex items-center gap-1.5">
           <RarityChip rarity={rarity} />
           {!done && (
@@ -238,11 +233,8 @@ export function TasksScreen() {
       } else if (t.kind === 'recurring') {
         const done = isDone(t, today);
         if (!done || doneToday.has(t.id)) out.push({ key: t.id, task: t, done });
-      } else {
-        for (const s of t.steps) if (s.doneDay === today) out.push({ key: s.id, task: t, step: s, done: true });
-        const next = t.steps.find((s) => !s.doneDay);
-        if (next) out.push({ key: next.id, task: t, step: next, done: false });
       }
+      // Project tasks live on their own path, in the Projets tab.
     }
     // To-do first, done at the bottom.
     return [...out.filter((r) => !r.done), ...out.filter((r) => r.done)];
@@ -250,10 +242,6 @@ export function TasksScreen() {
 
   const projects = tasks.filter((t) => t.kind === 'project');
   const openForm = (t?: Task) => {
-    if (t?.kind === 'project') {
-      window.location.hash = projectHref(t.id);
-      return;
-    }
     setEditing(t);
     if (!t && tab === 'projects') setFunnelOpen(true);
     else setFormOpen(true);

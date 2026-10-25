@@ -225,7 +225,7 @@ export function ProjectFunnel({
         </Field>
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-2 font-display text-sm font-semibold">Son emblème</legend>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-6 gap-2">
             {PROJECT_EMOJIS.map((e) => (
               <button
                 key={e}
@@ -233,8 +233,8 @@ export function ProjectFunnel({
                 aria-label={`Emblème ${e}`}
                 aria-pressed={emoji === e}
                 onClick={() => setEmoji(e)}
-                className={`press flex size-12 items-center justify-center rounded-xl text-2xl transition-colors ${
-                  emoji === e ? 'bg-indigo-soft ring-2 ring-indigo' : 'bg-chip'
+                className={`press flex aspect-square min-h-11 items-center justify-center rounded-xl text-2xl transition-colors ${
+                  emoji === e ? 'bg-indigo-soft ring-2 ring-indigo ring-inset' : 'bg-chip'
                 }`}
               >
                 {e}
