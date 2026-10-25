@@ -11,6 +11,8 @@ import { RarityChip, TaskForm } from './TaskForm';
 import { ConfirmDeleteProject, ProjectFunnel } from './ProjectFunnel';
 import { projectHref, projectProgress } from './Project';
 import { STAGE_COLORS } from '../components/stageColors';
+import { ProjectsIntro, projectsIntroDone } from '../tutorial/ProjectsIntro';
+import { useTuto } from '../tutorial/store';
 
 type Tab = 'today' | 'recurring' | 'projects';
 
@@ -218,6 +220,8 @@ export function TasksScreen() {
   const [editing, setEditing] = useState<Task | undefined>();
   const [formOpen, setFormOpen] = useState(false);
   const [funnelOpen, setFunnelOpen] = useState(false);
+  const [introOpen, setIntroOpen] = useState(false);
+  const inTuto = useTuto((st) => st.active);
   const setTab = (t: Tab) => {
     lastTab = t;
     setTabState(t);
@@ -234,6 +238,11 @@ export function TasksScreen() {
       else setFormOpen(true);
     }
   }, [newTaskTick]);
+
+  // The first visit to the Projets tab gets its own short tour, outside the first-launch one.
+  useEffect(() => {
+    if (tab === 'projects' && !inTuto && !projectsIntroDone()) setIntroOpen(true);
+  }, [tab, inTuto]);
 
   const doneToday = useMemo(() => {
     const set = new Set<string>();
@@ -364,6 +373,12 @@ export function TasksScreen() {
         </AnimatePresence>
       )}
 
+      {tab === 'projects' && (
+        <button type="button" onClick={() => setIntroOpen(true)} className="self-center py-2 text-sm font-semibold text-muted underline">
+          Comment marchent les projets ?
+        </button>
+      )}
+
       <TaskForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -374,6 +389,7 @@ export function TasksScreen() {
           setFunnelOpen(true);
         }}
       />
+      <ProjectsIntro open={introOpen} onClose={() => setIntroOpen(false)} onCreate={projects.length === 0 ? () => setFunnelOpen(true) : undefined} />
       <ProjectFunnel open={funnelOpen} onClose={() => setFunnelOpen(false)} onCreated={(id) => (window.location.hash = projectHref(id))} />
     </div>
   );
