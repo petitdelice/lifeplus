@@ -166,7 +166,7 @@ function Dots({ step }: { step: number }) {
   );
 }
 
-function Modal({ children }: { children: ReactNode }) {
+export function Modal({ children }: { children: ReactNode }) {
   return (
     <motion.div
       className="fixed inset-0 z-[65] flex items-center justify-center bg-ink/55 p-6"
