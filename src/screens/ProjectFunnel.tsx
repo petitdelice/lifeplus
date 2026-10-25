@@ -129,7 +129,7 @@ export function ProjectFunnel({
   task?: Task;
   onCreated?: (id: string) => void;
 }) {
-  const { addTask, updateTask, deleteTask, showToast } = useGame();
+  const { addTask, updateTask, showToast } = useGame();
   const [page, setPage] = useState(0);
   const [dir, setDir] = useState(1);
   const [title, setTitle] = useState('');
@@ -418,21 +418,43 @@ export function ProjectFunnel({
           <button type="submit" hidden />
         </form>
       </Sheet>
-      <Confirm
-        open={confirmDelete}
-        title="Supprimer ce projet ?"
-        confirmLabel="Supprimer"
-        danger
-        onCancel={() => setConfirmDelete(false)}
-        onConfirm={() => {
-          if (task) deleteTask(task.id);
-          setConfirmDelete(false);
-          onClose();
-          window.location.hash = '/taches';
-        }}
-      >
-        <p className="text-sm font-medium text-muted">Ce que tu as déjà gagné avec lui reste à toi.</p>
-      </Confirm>
+      {task && (
+        <ConfirmDeleteProject
+          open={confirmDelete}
+          task={task}
+          onCancel={() => setConfirmDelete(false)}
+          onDone={() => {
+            setConfirmDelete(false);
+            onClose();
+          }}
+        />
+      )}
     </>
+  );
+}
+
+/** Asks before a project goes, since it took a while to build; earned XP and éclats stay. */
+export function ConfirmDeleteProject({ open, task, onCancel, onDone }: { open: boolean; task: Task; onCancel: () => void; onDone?: () => void }) {
+  const { deleteTask, showToast } = useGame();
+  const n = task.steps.length;
+  return (
+    <Confirm
+      open={open}
+      title="Supprimer ce projet ?"
+      confirmLabel="Supprimer"
+      danger
+      onCancel={onCancel}
+      onConfirm={() => {
+        deleteTask(task.id);
+        onDone?.();
+        window.location.hash = '/taches';
+        showToast('Projet supprimé', 'info');
+      }}
+    >
+      <p className="text-sm font-medium text-muted">
+        « {task.title} » et tout son chemin ({task.stages.length} étape{task.stages.length > 1 ? 's' : ''}, {n} tâche{n > 1 ? 's' : ''}) seront effacés
+        pour de bon. Ce que tu as déjà gagné avec lui reste à toi.
+      </p>
+    </Confirm>
   );
 }

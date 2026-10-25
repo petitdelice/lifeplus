@@ -5,9 +5,9 @@ import { findUndoable, previewGains, type Step, type Task } from '../game/engine
 import { DURATION_LABELS, FLEMME_LABELS, dayKey, parseDay } from '../game/rules';
 import { RARITY_UI, fmt } from '../game/rarity';
 import { Button, Sheet } from '../components/ui';
-import { Check, Spark } from '../components/icons';
+import { Check, Spark, Trash } from '../components/icons';
 import { RarityChip } from './TaskForm';
-import { ProjectFunnel } from './ProjectFunnel';
+import { ConfirmDeleteProject, ProjectFunnel } from './ProjectFunnel';
 import { STAGE_COLORS } from '../components/stageColors';
 
 /** Sideways offset of each node, so the path winds like a trail. */
@@ -125,6 +125,7 @@ export function ProjectScreen({ id }: { id: string }) {
   const task = state.tasks.find((t) => t.id === id && t.kind === 'project');
   const [openStep, setOpenStep] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [float, setFloat] = useState<{ stepId: string; text: string } | null>(null);
 
   const [away, setAway] = useState<'up' | 'down' | null>(null);
@@ -297,6 +298,15 @@ export function ProjectScreen({ id }: { id: string }) {
             {task.finishedDay ? 'Tu as parcouru tout le chemin. Bravo.' : 'Bonus final : +50 % de tout ce que le projet t’a rapporté.'}
           </span>
         </motion.div>
+
+        <button
+          type="button"
+          onClick={() => setDeleting(true)}
+          className="press mt-6 flex min-h-11 items-center gap-2 rounded-xl border-[1.5px] border-line px-4 font-display text-sm font-semibold text-muted"
+        >
+          <Trash />
+          Supprimer ce projet
+        </button>
       </div>
 
       <Sheet open={!!step} onClose={() => setOpenStep(null)} title={step?.title ?? ''}>
@@ -372,6 +382,7 @@ export function ProjectScreen({ id }: { id: string }) {
       </AnimatePresence>
 
       <ProjectFunnel open={editing} onClose={() => setEditing(false)} task={task} />
+      <ConfirmDeleteProject open={deleting} task={task} onCancel={() => setDeleting(false)} />
     </div>
   );
 }
