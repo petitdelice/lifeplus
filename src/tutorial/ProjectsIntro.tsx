@@ -124,8 +124,8 @@ function MiniCard() {
       aria-hidden
     >
       <div className="flex items-center gap-2">
-        <span className="text-xl">🧹</span>
-        <span className="grow font-display text-sm font-bold">Ranger l’appart</span>
+        <span className="text-xl">🎸</span>
+        <span className="grow font-display text-sm font-bold">Apprendre la guitare</span>
         <span className="flex text-muted">
           <motion.span className="flex size-7 items-center justify-center rounded-lg" animate={{ backgroundColor: ['#ECEBFE00', '#ECEBFE', '#ECEBFE00'] }} transition={{ repeat: Infinity, duration: 2.2, delay: 0.6 }}>
             <Pencil size={15} />
@@ -140,7 +140,7 @@ function MiniCard() {
           <span key={i} className="h-1.5 grow rounded-full" style={{ background: c?.main ?? 'var(--color-line)' }} />
         ))}
       </div>
-      <span className="text-xs font-semibold text-muted">Prochaine : Vider les placards</span>
+      <span className="text-xs font-semibold text-muted">Prochaine : Enchaîner 3 accords</span>
     </motion.div>
   );
 }
