@@ -9,7 +9,7 @@ import type { GameState } from '../game/engine';
 import { useTuto } from '../tutorial/store';
 
 const RULES: [string, string][] = [
-  ['Raretés', 'À la création, tu dis combien de temps prend la tâche et quelle flemme elle te donne. Plus elle est pénible, plus elle rapporte.'],
+  ['Raretés', 'À la création, tu dis combien de temps prend la tâche, quelle flemme elle te donne et si elle est importante pour toi. Plus elle est pénible ou importante, plus elle rapporte.'],
   ['Types', 'Les tâches récurrentes gagnent +10 % par fois d’affilée (jusqu’à +50 %). Les projets rapportent plus à chaque étape, et la dernière ajoute 50 % de bonus.'],
   ['Streak', `Un jour compte dès qu’une tâche est faite. Bonus : ${STREAK_TIERS.map((t) => `${fmtMult(t.mult)} à ${t.days} jours`).join(', ')}.`],
   ['Shop', 'Un plaisir se débloque une fois (3 × son prix), puis se paie à chaque utilisation. Le gamble coûte la moitié du prix : si la chance te sourit, le plaisir est à toi.'],
