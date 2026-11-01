@@ -13,14 +13,24 @@ export const RARITY_GAINS: Record<Rarity, { xp: number; eclats: number }> = {
   mythique: { xp: 400, eclats: 200 },
 };
 
-/** Score = durée (1-5) + flemme (1-5), so 2..10. */
-export function rarityFromScore(duration: number, flemme: number): Rarity {
+/** Rarity that the importance guarantees at least, whatever the duration and flemme (index 0 = importance 1). */
+const IMPORTANCE_FLOOR: Rarity[] = ['commun', 'commun', 'rare', 'rare', 'epique'];
+
+/**
+ * Score = durée (1-5) + flemme (1-5), so 2..10.
+ * The importance (1-5) never adds to the score: it only guarantees a minimum rarity, so an easy task that
+ * matters is rewarded without making long or painful tasks climb any higher. Missing importance counts as 1.
+ */
+export function rarityFromScore(duration: number, flemme: number, importance = 1): Rarity {
   const score = duration + flemme;
-  if (score <= 3) return 'commun';
-  if (score <= 5) return 'rare';
-  if (score <= 7) return 'epique';
-  if (score <= 9) return 'legendaire';
-  return 'mythique';
+  let rarity: Rarity;
+  if (score <= 3) rarity = 'commun';
+  else if (score <= 5) rarity = 'rare';
+  else if (score <= 7) rarity = 'epique';
+  else if (score <= 9) rarity = 'legendaire';
+  else rarity = 'mythique';
+  const floor = IMPORTANCE_FLOOR[Math.min(5, Math.max(1, importance)) - 1];
+  return RARITIES.indexOf(floor) > RARITIES.indexOf(rarity) ? floor : rarity;
 }
 
 /** The user may move the suggested rarity by one notch at most. */
@@ -166,5 +176,6 @@ export const RECURRENCE_LABEL: Record<Recurrence, string> = {
 
 export const DURATION_LABELS = ['moins de 15 min', '15 à 60 min', '1 à 3 h', 'une demi-journée', 'une journée ou plus'];
 export const FLEMME_LABELS = ['aucune', 'un peu', 'moyenne', 'beaucoup', 'je la repousse depuis des semaines'];
+export const IMPORTANCE_LABELS = ['pas spécialement', 'un peu', 'assez', 'beaucoup', 'essentielle'];
 export const COST_LABELS = ['gratuit', 'moins de 10 €', '10 à 30 €', '30 à 100 €', 'plus de 100 €'];
 export const GUILTY_LABELS = ['pas du tout', 'un peu', 'beaucoup'];

@@ -44,6 +44,8 @@ export interface Step {
   title: string;
   duration: number;
   flemme: number;
+  /** 1-5; missing on older saves, which counts as 1. */
+  importance?: number;
   rarity: Rarity;
   doneDay?: string;
 }
@@ -54,6 +56,8 @@ export interface Task {
   kind: TaskKind;
   duration: number;
   flemme: number;
+  /** 1-5; missing on older saves, which counts as 1. */
+  importance?: number;
   rarity: Rarity;
   createdDay: string;
   // normal
@@ -189,6 +193,7 @@ export interface TaskInput {
   kind: TaskKind;
   duration: number;
   flemme: number;
+  importance?: number;
   rarity?: Rarity;
   recurrence?: Recurrence;
   emoji?: string;
@@ -203,6 +208,7 @@ export interface StepInput {
   title: string;
   duration: number;
   flemme: number;
+  importance?: number;
   rarity?: Rarity;
 }
 
@@ -232,7 +238,8 @@ function buildProject(input: TaskInput, previous: Step[] = []): { stages: Stage[
         title: s.title.trim(),
         duration: s.duration,
         flemme: s.flemme,
-        rarity: s.rarity ?? rarityFromScore(s.duration, s.flemme),
+        importance: s.importance ?? 1,
+        rarity: s.rarity ?? rarityFromScore(s.duration, s.flemme, s.importance),
         doneDay: old?.doneDay,
       });
     }
@@ -263,7 +270,8 @@ export function addTask(state: GameState, input: TaskInput, today = dayKey()): G
     kind: input.kind,
     duration: input.duration,
     flemme: input.flemme,
-    rarity: input.rarity ?? rarityFromScore(input.duration, input.flemme),
+    importance: input.importance ?? 1,
+    rarity: input.rarity ?? rarityFromScore(input.duration, input.flemme, input.importance),
     createdDay: today,
     recurrence: input.kind === 'recurring' ? input.recurrence ?? 'daily' : undefined,
     chain: 0,
@@ -286,7 +294,8 @@ export function updateTask(state: GameState, id: string, input: TaskInput): Game
             title: input.title.trim(),
             duration: input.duration,
             flemme: input.flemme,
-            rarity: input.rarity ?? rarityFromScore(input.duration, input.flemme),
+            importance: input.importance ?? 1,
+            rarity: input.rarity ?? rarityFromScore(input.duration, input.flemme, input.importance),
             recurrence: t.kind === 'recurring' ? input.recurrence ?? t.recurrence : undefined,
             emoji: t.kind === 'project' ? input.emoji : undefined,
             ...(t.kind === 'project' ? buildProject(input, t.steps) : { stages: [], steps: [] }),
