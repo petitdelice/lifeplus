@@ -358,7 +358,7 @@ export function ProjectFunnel({
                   {tasks.map((t) => (
                     <span key={n++} className="flex items-center gap-1 rounded-full bg-bg py-0.5 pr-1 pl-2.5 text-xs font-bold">
                       {t.title.trim()}
-                      <RarityChip rarity={rarityFromScore(t.duration, t.flemme)} className="!px-1.5 !text-[10px]" />
+                      <RarityChip rarity={rarityFromScore(t.duration, t.flemme, t.importance)} className="!px-1.5 !text-[10px]" />
                     </span>
                   ))}
                 </span>
