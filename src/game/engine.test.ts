@@ -17,7 +17,7 @@ import {
   visitShop,
   type GameState,
 } from './engine';
-import { levelInfo, rarityFromScore, usagePrice, xpForNext, addDays } from './rules';
+import { compareTasks, levelInfo, rarityFromScore, usagePrice, xpForNext, addDays } from './rules';
 
 const D0 = '2026-10-01';
 
@@ -286,5 +286,28 @@ describe('project paths', () => {
     // Unticking restores a task that still has its stage.
     expect(undoTask(m, p.id, p.steps[0].id, D0)!.tasks[0].stages).toHaveLength(1);
     expect(migrateState(m)).toEqual(m);
+  });
+});
+
+describe('compareTasks', () => {
+  it('puts the rarest first, then sorts titles alphabetically in French', () => {
+    const tasks = [
+      { rarity: 'commun' as const, title: 'zumba' },
+      { rarity: 'mythique' as const, title: 'Déménager' },
+      { rarity: 'commun' as const, title: 'Écrire' },
+      { rarity: 'rare' as const, title: 'Tâche 10' },
+      { rarity: 'commun' as const, title: 'arroser' },
+      { rarity: 'rare' as const, title: 'Tâche 2' },
+      { rarity: 'legendaire' as const, title: 'Courir' },
+    ];
+    expect([...tasks].sort(compareTasks).map((t) => t.title)).toEqual([
+      'Déménager',
+      'Courir',
+      'Tâche 2',
+      'Tâche 10',
+      'arroser',
+      'Écrire',
+      'zumba',
+    ]);
   });
 });

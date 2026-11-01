@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { useGame, snapshot } from '../store/game';
 import { findUndoable, isDone, previewGains, type Task } from '../game/engine';
-import { RECURRENCE_LABEL, dayKey, nextChain, regularityBonus, type Recurrence } from '../game/rules';
+import { RECURRENCE_LABEL, compareTasks, dayKey, nextChain, regularityBonus, type Recurrence } from '../game/rules';
 import { RARITY_UI, fmt } from '../game/rarity';
 import { TASK_SUGGESTIONS } from '../game/defaults';
 import { Check, Pencil, Trash } from '../components/icons';
@@ -312,7 +312,8 @@ export function TasksScreen() {
       }
       // Routines live in the Récurrentes tab (Aujourd'hui only shows a summary of them), and project tasks on their own path.
     }
-    // To-do first, done at the bottom.
+    // To-do first, done at the bottom; each part rarest first, then alphabetical.
+    out.sort((a, b) => compareTasks(a.task, b.task));
     return [...out.filter((r) => !r.done), ...out.filter((r) => r.done)];
   }, [tasks, tab, today]);
 
