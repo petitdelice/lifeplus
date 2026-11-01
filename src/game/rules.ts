@@ -13,17 +13,24 @@ export const RARITY_GAINS: Record<Rarity, { xp: number; eclats: number }> = {
   mythique: { xp: 400, eclats: 200 },
 };
 
+/** Rarity that the importance guarantees at least, whatever the duration and flemme (index 0 = importance 1). */
+const IMPORTANCE_FLOOR: Rarity[] = ['commun', 'commun', 'rare', 'rare', 'epique'];
+
 /**
- * Score = durée (1-5) + flemme (1-5) + importance (1-5, each notch above the first adds 1), capped at 10.
- * An easy task that matters a lot is rewarded too, and tasks without importance keep their old rarity.
+ * Score = durée (1-5) + flemme (1-5), so 2..10.
+ * The importance (1-5) never adds to the score: it only guarantees a minimum rarity, so an easy task that
+ * matters is rewarded without making long or painful tasks climb any higher. Missing importance counts as 1.
  */
 export function rarityFromScore(duration: number, flemme: number, importance = 1): Rarity {
-  const score = Math.min(10, duration + flemme + Math.max(0, importance - 1));
-  if (score <= 3) return 'commun';
-  if (score <= 5) return 'rare';
-  if (score <= 7) return 'epique';
-  if (score <= 9) return 'legendaire';
-  return 'mythique';
+  const score = duration + flemme;
+  let rarity: Rarity;
+  if (score <= 3) rarity = 'commun';
+  else if (score <= 5) rarity = 'rare';
+  else if (score <= 7) rarity = 'epique';
+  else if (score <= 9) rarity = 'legendaire';
+  else rarity = 'mythique';
+  const floor = IMPORTANCE_FLOOR[Math.min(5, Math.max(1, importance)) - 1];
+  return RARITIES.indexOf(floor) > RARITIES.indexOf(rarity) ? floor : rarity;
 }
 
 /** The user may move the suggested rarity by one notch at most. */

@@ -38,7 +38,11 @@ describe('rules', () => {
   it('rewards an easy task that matters', () => {
     expect(rarityFromScore(1, 1, 1)).toBe('commun');
     expect(rarityFromScore(1, 1, 3)).toBe('rare');
+    expect(rarityFromScore(1, 1, 4)).toBe('rare');
     expect(rarityFromScore(1, 1, 5)).toBe('epique');
+    // Importance is a floor, never a boost: harder tasks keep their rarity.
+    expect(rarityFromScore(3, 4, 5)).toBe('epique');
+    expect(rarityFromScore(4, 5, 5)).toBe('legendaire');
     expect(rarityFromScore(5, 5, 5)).toBe('mythique');
   });
 
