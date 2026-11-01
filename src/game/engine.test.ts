@@ -35,6 +35,17 @@ describe('rules', () => {
     expect(rarityFromScore(5, 5)).toBe('mythique');
   });
 
+  it('rewards an easy task that matters', () => {
+    expect(rarityFromScore(1, 1, 1)).toBe('commun');
+    expect(rarityFromScore(1, 1, 3)).toBe('rare');
+    expect(rarityFromScore(1, 1, 4)).toBe('rare');
+    expect(rarityFromScore(1, 1, 5)).toBe('epique');
+    // Importance is a floor, never a boost: harder tasks keep their rarity.
+    expect(rarityFromScore(3, 4, 5)).toBe('epique');
+    expect(rarityFromScore(4, 5, 5)).toBe('legendaire');
+    expect(rarityFromScore(5, 5, 5)).toBe('mythique');
+  });
+
   it('prices rewards like the doc table', () => {
     expect(usagePrice(2, 0, 1)).toBe(40);
     expect(usagePrice(2, 1, 3)).toBe(90);
@@ -53,6 +64,15 @@ describe('rules', () => {
 });
 
 describe('tasks', () => {
+  it('keeps the importance, and counts older tasks without it as not important', () => {
+    const s = addTask(initialState(D0), { title: 'Rendez-vous médecin', kind: 'normal', duration: 1, flemme: 1, importance: 5 }, D0);
+    expect(s.tasks[0].importance).toBe(5);
+    expect(s.tasks[0].rarity).toBe('epique');
+    const old = addTask(initialState(D0), { title: 'Poubelles', kind: 'normal', duration: 1, flemme: 1 }, D0);
+    expect(old.tasks[0].importance).toBe(1);
+    expect(old.tasks[0].rarity).toBe('commun');
+  });
+
   it('gives base gains for a normal task and a level-up bonus', () => {
     const { s, t } = withTask(initialState(D0), { title: 'Impôts', kind: 'normal', duration: 4, flemme: 5 });
     const r = completeTask(s, t.id, undefined, D0)!;

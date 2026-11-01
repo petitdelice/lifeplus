@@ -31,8 +31,8 @@ const STEPS: StepDef[] = [
     body: (
       <>
         <p>
-          Chaque tâche a une rareté, calculée selon sa durée et la flemme qu’elle te donne. Plus elle est pénible, plus elle rapporte. Les plus rares
-          s’affichent en haut.
+          Chaque tâche a une rareté, calculée selon sa durée, la flemme qu’elle te donne et son importance. Plus elle est pénible ou importante, plus elle
+          rapporte. Les plus rares s’affichent en haut.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {RARITIES.map((r) => (
@@ -81,7 +81,7 @@ const STEPS: StepDef[] = [
     route: 'taches',
     target: 'add',
     title: 'Créer une tâche',
-    body: <p>Touche le + pour ajouter les tiennes. Tu indiques sa durée et ta flemme, la rareté se calcule toute seule.</p>,
+    body: <p>Touche le + pour ajouter les tiennes. Tu indiques sa durée, ta flemme et son importance, la rareté se calcule toute seule.</p>,
   },
   {
     route: 'taches',

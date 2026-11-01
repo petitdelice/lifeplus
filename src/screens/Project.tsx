@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useGame, snapshot } from '../store/game';
 import { findUndoable, previewGains, type Step, type Task } from '../game/engine';
-import { DURATION_LABELS, FLEMME_LABELS, dayKey, parseDay } from '../game/rules';
+import { DURATION_LABELS, FLEMME_LABELS, IMPORTANCE_LABELS, dayKey, parseDay } from '../game/rules';
 import { RARITY_UI, fmt } from '../game/rarity';
 import { Button, Sheet } from '../components/ui';
 import { Check, Spark } from '../components/icons';
@@ -307,7 +307,7 @@ export function ProjectScreen({ id }: { id: string }) {
               </span>
               <RarityChip rarity={step.rarity} />
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-3 gap-2 text-sm">
               <div className="rounded-2xl bg-bg p-3">
                 <div className="text-xs font-semibold text-muted">Durée</div>
                 <div className="font-bold">{DURATION_LABELS[step.duration - 1]}</div>
@@ -315,6 +315,10 @@ export function ProjectScreen({ id }: { id: string }) {
               <div className="rounded-2xl bg-bg p-3">
                 <div className="text-xs font-semibold text-muted">Flemme</div>
                 <div className="font-bold">{FLEMME_LABELS[step.flemme - 1]}</div>
+              </div>
+              <div className="rounded-2xl bg-bg p-3">
+                <div className="text-xs font-semibold text-muted">Importance</div>
+                <div className="font-bold">{IMPORTANCE_LABELS[(step.importance ?? 1) - 1]}</div>
               </div>
             </div>
             {step.doneDay ? (
