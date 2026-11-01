@@ -221,9 +221,54 @@ function ProjectCard({ task }: { task: Task }) {
   );
 }
 
+/** Aujourd'hui only shows one line for the routines, so the day stays light; the cards live in Récurrentes. */
+function RoutinesSummary({ done, total, onOpen }: { done: number; total: number; onOpen: () => void }) {
+  const all = done === total;
+  const left = total - done;
+  return (
+    <motion.button
+      layout
+      type="button"
+      onClick={onOpen}
+      whileTap={{ scale: 0.98 }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      aria-label={`Tes routines : ${done} sur ${total} faites. Ouvrir les récurrentes`}
+      className="flex items-center gap-3 rounded-2xl bg-white p-3.5 text-left shadow-card"
+    >
+      <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-xl ${all ? 'bg-mint-soft' : 'bg-indigo-soft'}`} aria-hidden>
+        {all ? '✓' : '🔁'}
+      </span>
+      <span className="flex min-w-0 grow flex-col gap-1.5">
+        <span className="flex items-baseline justify-between gap-2">
+          <span className="font-display text-base font-bold">Tes routines</span>
+          <span className="shrink-0 text-xs font-bold text-muted">
+            {done}/{total} faite{done > 1 ? 's' : ''}
+          </span>
+        </span>
+        <span className="h-2 overflow-hidden rounded-full bg-indigo-soft">
+          <motion.span
+            className="block h-full rounded-full"
+            style={{ background: all ? 'var(--color-mint)' : 'var(--color-indigo)' }}
+            initial={false}
+            animate={{ width: `${total ? (done / total) * 100 : 0}%` }}
+            transition={{ type: 'spring', damping: 16 }}
+          />
+        </span>
+        <span className="text-xs font-semibold text-muted">
+          {all ? 'Toutes à jour, bravo !' : `${left} à cocher dans Récurrentes`}
+        </span>
+      </span>
+      <span className="shrink-0 font-display text-xl text-muted" aria-hidden>
+        ›
+      </span>
+    </motion.button>
+  );
+}
+
 export function TasksScreen() {
   const state = useGame();
-  const { tasks, completions, addTask, showToast } = state;
+  const { tasks, addTask, showToast } = state;
   const [tab, setTabState] = useState<Tab>(lastTab);
   const [editing, setEditing] = useState<Task | undefined>();
   const [formOpen, setFormOpen] = useState(false);
@@ -253,12 +298,6 @@ export function TasksScreen() {
     if (tab === 'projects' && !inTuto && !projectsIntroDone()) setIntroOpen(true);
   }, [tab, inTuto]);
 
-  const doneToday = useMemo(() => {
-    const set = new Set<string>();
-    for (const c of completions) if (c.day === today) set.add(c.stepId ?? c.taskId);
-    return set;
-  }, [completions, today]);
-
   const rows = useMemo<Row[]>(() => {
     if (tab === 'projects') return [];
     const out: Row[] = [];
@@ -270,15 +309,18 @@ export function TasksScreen() {
       if (t.kind === 'normal') {
         if (!t.doneDay) out.push({ key: t.id, task: t, done: false });
         else if (t.doneDay === today) out.push({ key: t.id, task: t, done: true });
-      } else if (t.kind === 'recurring') {
-        const done = isDone(t, today);
-        if (!done || doneToday.has(t.id)) out.push({ key: t.id, task: t, done });
       }
-      // Project tasks live on their own path, in the Projets tab.
+      // Routines live in the Récurrentes tab (Aujourd'hui only shows a summary of them), and project tasks on their own path.
     }
     // To-do first, done at the bottom.
     return [...out.filter((r) => !r.done), ...out.filter((r) => r.done)];
-  }, [tasks, tab, today, doneToday]);
+  }, [tasks, tab, today]);
+
+  // Same count as the "x/y faites" of the Récurrentes dividers: a weekly task done on Monday stays done all week.
+  const routines = useMemo(() => {
+    const rec = tasks.filter((t) => t.kind === 'recurring');
+    return { total: rec.length, done: rec.filter((t) => isDone(t, today)).length };
+  }, [tasks, today]);
 
   // Récurrentes: one block per frequency, in the day > week > month order. Empty frequencies are left out.
   const groups = useMemo(
@@ -299,8 +341,14 @@ export function TasksScreen() {
     if (!t && tab === 'projects') setFunnelOpen(true);
     else setFormOpen(true);
   };
-  const allDone = tab === 'today' && rows.length > 0 && rows.every((r) => r.done);
+  const showRoutines = tab === 'today' && routines.total > 0;
+  const allDone = tab === 'today' && (rows.length > 0 || routines.total > 0) && rows.every((r) => r.done) && routines.done === routines.total;
   const empty = tab === 'projects' ? projects.length === 0 : rows.length === 0;
+  const openRoutines = () => {
+    // The summary counts every frequency, so land on all of them.
+    setRecFilter('all');
+    setTab('recurring');
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -337,7 +385,17 @@ export function TasksScreen() {
         </motion.div>
       )}
 
-      {empty ? (
+      {showRoutines && <RoutinesSummary done={routines.done} total={routines.total} onOpen={openRoutines} />}
+
+      {empty && showRoutines ? (
+        // The routines card already fills the day: a light nudge is enough, no big empty state.
+        <div className="flex flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-line px-6 py-6 text-center">
+          <p className="text-sm font-medium text-muted">Pas d’autre tâche pour le moment.</p>
+          <button type="button" onClick={() => openForm()} className="press font-display text-[15px] font-semibold text-indigo">
+            + Ajouter une tâche
+          </button>
+        </div>
+      ) : empty ? (
         <div className="flex flex-col items-center gap-4 rounded-3xl bg-white px-6 py-8 text-center shadow-card">
           <div className="text-4xl" aria-hidden>
             {tab === 'projects' ? '🧱' : tab === 'recurring' ? '🔁' : '🌱'}
