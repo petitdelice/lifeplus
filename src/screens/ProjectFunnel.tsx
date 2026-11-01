@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useGame } from '../store/game';
 import { stageName, type Task } from '../game/engine';
-import { DURATION_LABELS, FLEMME_LABELS, PROJECT_FINAL_BONUS, RARITY_GAINS, progressMultiplier, rarityFromScore } from '../game/rules';
+import { DURATION_LABELS, FLEMME_LABELS, IMPORTANCE_LABELS, PROJECT_FINAL_BONUS, RARITY_GAINS, progressMultiplier, rarityFromScore } from '../game/rules';
 import { fmt } from '../game/rarity';
 import { Button, Confirm, Field, Sheet, inputClass } from '../components/ui';
 import { Trash } from '../components/icons';
@@ -16,6 +16,7 @@ interface TaskDraft {
   title: string;
   duration: number;
   flemme: number;
+  importance: number;
   done?: boolean;
 }
 
@@ -25,7 +26,7 @@ interface StageDraft {
   tasks: TaskDraft[];
 }
 
-const blankTask = (): TaskDraft => ({ title: '', duration: 2, flemme: 2 });
+const blankTask = (): TaskDraft => ({ title: '', duration: 2, flemme: 2, importance: 1 });
 const STAGE_HINTS = ['Préparer', 'Se lancer', 'Finir en beauté'];
 const TASK_HINTS = ['Faire la liste', 'Acheter le nécessaire', 'Tâche suivante'];
 
@@ -37,7 +38,7 @@ function estimate(stages: StageDraft[]) {
   let xp = 0;
   let eclats = 0;
   tasks.forEach((t, i) => {
-    const base = RARITY_GAINS[rarityFromScore(t.duration, t.flemme)];
+    const base = RARITY_GAINS[rarityFromScore(t.duration, t.flemme, t.importance)];
     const f = progressMultiplier(i, tasks.length);
     xp += Math.round(base.xp * f);
     eclats += Math.round(base.eclats * f);
@@ -56,8 +57,8 @@ function TaskRow({
   onChange: (patch: Partial<TaskDraft>) => void;
   onRemove?: () => void;
 }) {
-  const r = rarityFromScore(task.duration, task.flemme);
-  const select = 'min-h-10 w-full min-w-0 rounded-lg border-[1.5px] border-line bg-white px-2 text-sm text-ink';
+  const r = rarityFromScore(task.duration, task.flemme, task.importance);
+  const select = 'min-h-10 w-full min-w-0 rounded-lg border-[1.5px] border-line bg-white px-1.5 text-[13px] text-ink';
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -87,7 +88,7 @@ function TaskRow({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 pl-7 text-sm font-semibold text-muted">
+      <div className="grid grid-cols-3 items-end gap-2 pl-7 text-sm font-semibold text-muted">
         <label className="flex min-w-0 flex-col gap-1 text-xs">
           Durée
           <select className={select} value={task.duration} onChange={(e) => onChange({ duration: Number(e.target.value) })} disabled={task.done}>
@@ -108,7 +109,19 @@ function TaskRow({
             ))}
           </select>
         </label>
-        <RarityChip rarity={r} className="mb-2.5" />
+        <label className="flex min-w-0 flex-col gap-1 text-xs">
+          Importance
+          <select className={select} value={task.importance} onChange={(e) => onChange({ importance: Number(e.target.value) })} disabled={task.done}>
+            {IMPORTANCE_LABELS.map((l, j) => (
+              <option key={j} value={j + 1}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="flex justify-end">
+        <RarityChip rarity={r} />
       </div>
     </motion.div>
   );
@@ -150,7 +163,7 @@ export function ProjectFunnel({
             title: g.title,
             tasks: task.steps
               .filter((s) => s.stageId === g.id)
-              .map((s) => ({ id: s.id, title: s.title, duration: s.duration, flemme: s.flemme, done: !!s.doneDay })),
+              .map((s) => ({ id: s.id, title: s.title, duration: s.duration, flemme: s.flemme, importance: s.importance ?? 1, done: !!s.doneDay })),
           }))
         : [
             { title: '', tasks: [blankTask()] },
@@ -187,7 +200,7 @@ export function ProjectFunnel({
       stages: stages.map((g, i) => ({
         id: g.id,
         title: g.title.trim() || stageName(i),
-        tasks: g.tasks.map((t) => ({ id: t.id, title: t.title, duration: t.duration, flemme: t.flemme })),
+        tasks: g.tasks.map((t) => ({ id: t.id, title: t.title, duration: t.duration, flemme: t.flemme, importance: t.importance })),
       })),
     };
     if (task) {
@@ -314,7 +327,7 @@ export function ProjectFunnel({
         <Button tone="ghost" onClick={() => setStage(stageIndex, { tasks: [...g.tasks, blankTask()] })}>
           + Ajouter une tâche
         </Button>
-        <p className="text-sm font-medium text-muted">Plus une tâche est longue ou pénible, plus elle rapporte.</p>
+        <p className="text-sm font-medium text-muted">Plus une tâche est longue, pénible ou importante, plus elle rapporte.</p>
       </div>
     );
   } else {

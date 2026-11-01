@@ -13,9 +13,12 @@ export const RARITY_GAINS: Record<Rarity, { xp: number; eclats: number }> = {
   mythique: { xp: 400, eclats: 200 },
 };
 
-/** Score = durée (1-5) + flemme (1-5), so 2..10. */
-export function rarityFromScore(duration: number, flemme: number): Rarity {
-  const score = duration + flemme;
+/**
+ * Score = durée (1-5) + flemme (1-5) + importance (1-5, each notch above the first adds 1), capped at 10.
+ * An easy task that matters a lot is rewarded too, and tasks without importance keep their old rarity.
+ */
+export function rarityFromScore(duration: number, flemme: number, importance = 1): Rarity {
+  const score = Math.min(10, duration + flemme + Math.max(0, importance - 1));
   if (score <= 3) return 'commun';
   if (score <= 5) return 'rare';
   if (score <= 7) return 'epique';
@@ -166,5 +169,6 @@ export const RECURRENCE_LABEL: Record<Recurrence, string> = {
 
 export const DURATION_LABELS = ['moins de 15 min', '15 à 60 min', '1 à 3 h', 'une demi-journée', 'une journée ou plus'];
 export const FLEMME_LABELS = ['aucune', 'un peu', 'moyenne', 'beaucoup', 'je la repousse depuis des semaines'];
+export const IMPORTANCE_LABELS = ['pas spécialement', 'un peu', 'assez', 'beaucoup', 'essentielle'];
 export const COST_LABELS = ['gratuit', 'moins de 10 €', '10 à 30 €', '30 à 100 €', 'plus de 100 €'];
 export const GUILTY_LABELS = ['pas du tout', 'un peu', 'beaucoup'];

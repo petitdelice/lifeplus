@@ -4,6 +4,7 @@ import type { Task, TaskKind } from '../game/engine';
 import {
   DURATION_LABELS,
   FLEMME_LABELS,
+  IMPORTANCE_LABELS,
   RARITY_GAINS,
   allowedRarities,
   rarityFromScore,
@@ -41,6 +42,7 @@ export function TaskForm({
   const [recurrence, setRecurrence] = useState<Recurrence>('daily');
   const [duration, setDuration] = useState(2);
   const [flemme, setFlemme] = useState(2);
+  const [importance, setImportance] = useState(1);
   const [rarity, setRarity] = useState<Rarity | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -51,11 +53,12 @@ export function TaskForm({
     setRecurrence(task?.recurrence ?? defaultRecurrence);
     setDuration(task?.duration ?? 2);
     setFlemme(task?.flemme ?? 2);
-    const suggested = task ? rarityFromScore(task.duration, task.flemme) : null;
+    setImportance(task?.importance ?? 1);
+    const suggested = task ? rarityFromScore(task.duration, task.flemme, task.importance) : null;
     setRarity(task && task.rarity !== suggested ? task.rarity : null);
   }, [open, task, defaultKind, defaultRecurrence]);
 
-  const suggested = rarityFromScore(duration, flemme);
+  const suggested = rarityFromScore(duration, flemme, importance);
   const allowed = allowedRarities(suggested);
   const chosen = rarity && allowed.includes(rarity) ? rarity : suggested;
   const gains = RARITY_GAINS[chosen];
@@ -68,6 +71,7 @@ export function TaskForm({
       kind,
       duration,
       flemme,
+      importance,
       rarity: chosen,
       recurrence,
     };
@@ -144,6 +148,7 @@ export function TaskForm({
 
           <Scale label="Ça prend combien de temps ?" value={duration} onChange={setDuration} labels={DURATION_LABELS} />
           <Scale label="Quelle flemme ?" value={flemme} onChange={setFlemme} labels={FLEMME_LABELS} />
+          <Scale label="C’est important pour toi ?" value={importance} onChange={setImportance} labels={IMPORTANCE_LABELS} />
           <div className="flex flex-col gap-2 rounded-2xl bg-bg p-4">
             <div className="font-display text-sm font-semibold">Rareté</div>
             <div className="flex flex-wrap gap-2">
