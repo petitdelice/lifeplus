@@ -9,35 +9,46 @@ export const DEMO_ECLATS = 350;
 
 export function demoState(today = dayKey()): GameState {
   let s = initialState(today);
+  // One simple task per rarity, so "Aujourd'hui" shows the whole ladder, rarest on top.
   s = addTask(s, { title: "Boire un grand verre d'eau", kind: 'normal', duration: 1, flemme: 1 }, today);
-  s = addTask(s, { title: '10 min d’étirements', kind: 'recurring', duration: 1, flemme: 3, recurrence: 'daily' }, today);
+  s = addTask(s, { title: 'Lancer une machine', kind: 'normal', duration: 1, flemme: 3 }, today);
   s = addTask(s, { title: 'Répondre au mail qui traîne', kind: 'normal', duration: 2, flemme: 4 }, today);
+  s = addTask(s, { title: 'Faire ma déclaration d’impôts', kind: 'normal', duration: 4, flemme: 5 }, today);
+  s = addTask(s, { title: 'Déménager', kind: 'normal', duration: 5, flemme: 5 }, today);
+  // Two frequencies, so Récurrentes shows its dividers and filters.
+  s = addTask(s, { title: '10 min d’étirements', kind: 'recurring', duration: 1, flemme: 3, recurrence: 'daily' }, today);
+  s = addTask(s, { title: 'Arroser les plantes', kind: 'recurring', duration: 1, flemme: 1, recurrence: 'weekly' }, today);
+  // Same example as the Projets tour.
   s = addTask(
     s,
     {
-      title: 'Ranger l’appart',
+      title: 'Apprendre la guitare',
       kind: 'project',
       duration: 3,
       flemme: 3,
-      emoji: '🧹',
+      emoji: '🎸',
       stages: [
         {
-          title: 'Le bureau',
+          title: 'Les bases',
           tasks: [
-            { title: 'Trier les papiers', duration: 2, flemme: 2 },
-            { title: 'Dépoussiérer', duration: 1, flemme: 2 },
+            { title: 'Accorder la guitare', duration: 1, flemme: 2 },
+            { title: 'Apprendre 3 accords', duration: 2, flemme: 3 },
+            { title: 'Enchaîner 3 accords', duration: 2, flemme: 3 },
           ],
         },
-        { title: 'La cuisine', tasks: [{ title: 'Vider les placards', duration: 2, flemme: 3 }] },
-        { title: 'Le grenier', tasks: [{ title: 'Tout descendre', duration: 3, flemme: 4 }] },
+        {
+          title: 'Un premier morceau',
+          tasks: [
+            { title: 'Choisir un morceau facile', duration: 1, flemme: 1 },
+            { title: 'Le jouer en entier', duration: 3, flemme: 4 },
+          ],
+        },
       ],
     },
     today,
   );
-  s = addTask(s, { title: 'Faire ma déclaration d’impôts', kind: 'normal', duration: 4, flemme: 5 }, today);
-  s = addTask(s, { title: 'Déménager', kind: 'normal', duration: 5, flemme: 5 }, today);
 
-  // The routine was done yesterday too, so its regularity bonus shows.
-  const tasks = s.tasks.map((t) => (t.kind === 'recurring' ? { ...t, lastPeriod: addDays(today, -1), chain: 2 } : t));
+  // The daily routine was done yesterday too, so its regularity bonus shows.
+  const tasks = s.tasks.map((t) => (t.recurrence === 'daily' ? { ...t, lastPeriod: addDays(today, -1), chain: 2 } : t));
   return { ...s, tasks, totalXp: DEMO_XP, eclats: DEMO_ECLATS, earned: DEMO_ECLATS };
 }

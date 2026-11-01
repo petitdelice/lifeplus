@@ -15,6 +15,8 @@ interface StepDef {
   route?: Route;
   /** data-tuto value of the element to light up. */
   target?: string;
+  /** Light up the last match instead of the first one. */
+  last?: boolean;
   title: string;
   body: ReactNode;
   /** Waits for the player to do it instead of showing a "Suivant" button. */
@@ -28,7 +30,10 @@ const STEPS: StepDef[] = [
     title: 'Une journée de démo',
     body: (
       <>
-        <p>Chaque tâche a une rareté, calculée selon sa durée et la flemme qu’elle te donne. Plus elle est pénible, plus elle rapporte.</p>
+        <p>
+          Chaque tâche a une rareté, calculée selon sa durée et la flemme qu’elle te donne. Plus elle est pénible, plus elle rapporte. Les plus rares
+          s’affichent en haut.
+        </p>
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {RARITIES.map((r) => (
             <span key={r} className="flex items-center gap-1">
@@ -43,6 +48,8 @@ const STEPS: StepDef[] = [
   {
     route: 'taches',
     target: 'check',
+    // Tasks are sorted rarest first: the last one is the small, easy one.
+    last: true,
     title: 'À toi de jouer',
     body: <p>Coche une tâche en touchant le rond à gauche. Une erreur de clic ? Touche-le à nouveau, sans aucune pénalité.</p>,
     until: (s) => s.completions.length > 0,
@@ -64,8 +71,9 @@ const STEPS: StepDef[] = [
     title: 'Trois types de tâches',
     body: (
       <p>
-        Les <b>simples</b>, à faire une fois. Les <b>récurrentes</b>, chaque jour, semaine ou mois, avec un bonus de régularité jusqu’à +50 %. Et les{' '}
-        <b>projets</b>, de vrais chemins : des étapes avec leurs tâches, chacune rapporte plus que la précédente, et l’arrivée ajoute +50 %.
+        Les <b>simples</b>, à faire une fois, remplissent «&nbsp;Aujourd’hui&nbsp;». Les <b>récurrentes</b> reviennent chaque jour, semaine ou mois, avec un
+        bonus de régularité jusqu’à +50&nbsp;% : la carte «&nbsp;Tes routines&nbsp;» t’y mène. Les <b>projets</b> sont de vrais chemins, qui rapportent de plus
+        en plus.
       </p>
     ),
   },
@@ -97,7 +105,7 @@ const STEPS: StepDef[] = [
     route: 'shop',
     target: 'enjoy',
     title: 'Fais-toi plaisir',
-    body: <p>Il est à toi. Quand tu te l’offres pour de vrai, touche « Utiliser » : il coûte son prix en Éclats.</p>,
+    body: <p>Il est à toi. Quand tu te l’offres pour de vrai, touche «&nbsp;Utiliser&nbsp;» : il coûte son prix en Éclats.</p>,
     until: (s) => s.enjoyed > 0,
   },
   {
@@ -120,17 +128,17 @@ const STEPS: StepDef[] = [
   { modal: true, title: 'Prêt pour de vrai ?', body: null },
 ];
 
-/** First visible element for a data-tuto key (the wallet and flame exist twice, for phone and desktop). */
-function findTarget(key: string): HTMLElement | null {
-  for (const el of document.querySelectorAll<HTMLElement>(`[data-tuto="${key}"]`)) {
+/** First (or last) visible element for a data-tuto key (the wallet and flame exist twice, for phone and desktop). */
+function findTarget(key: string, last = false): HTMLElement | null {
+  const visible = [...document.querySelectorAll<HTMLElement>(`[data-tuto="${key}"]`)].filter((el) => {
     const r = el.getBoundingClientRect();
-    if (r.width > 0 && r.height > 0) return el;
-  }
-  return null;
+    return r.width > 0 && r.height > 0;
+  });
+  return (last ? visible.at(-1) : visible[0]) ?? null;
 }
 
 /** Follows the target's box every frame, so scrolling and layout animations stay in sync. */
-function useTargetRect(key: string | undefined, step: number) {
+function useTargetRect(key: string | undefined, step: number, last = false) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   useLayoutEffect(() => {
     setRect(null);
@@ -139,7 +147,7 @@ function useTargetRect(key: string | undefined, step: number) {
     let scrolled = false;
     const started = performance.now();
     const loop = () => {
-      const el = findTarget(key);
+      const el = findTarget(key, last);
       if (el && !scrolled && performance.now() - started > 250) {
         scrolled = true;
         const r = el.getBoundingClientRect();
@@ -151,7 +159,7 @@ function useTargetRect(key: string | undefined, step: number) {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [key, step]);
+  }, [key, step, last]);
   return rect;
 }
 
@@ -193,7 +201,7 @@ export function Tutorial() {
   const { active, replay, step, next, finish } = useTuto();
   const events = useGame((s) => s.events);
   const def = active ? STEPS[step] : undefined;
-  const rect = useTargetRect(def?.target, step);
+  const rect = useTargetRect(def?.target, step, def?.last);
 
   // Each step opens its own screen.
   useEffect(() => {

@@ -293,6 +293,11 @@ export function TasksScreen() {
     }
   }, [newTaskTick]);
 
+  // The tour opens on the demo day, whatever tab was left open before it was replayed.
+  useEffect(() => {
+    if (inTuto) setTab('today');
+  }, [inTuto]);
+
   // The first visit to the Projets tab gets its own short tour, outside the first-launch one.
   useEffect(() => {
     if (tab === 'projects' && !inTuto && !projectsIntroDone()) setIntroOpen(true);
