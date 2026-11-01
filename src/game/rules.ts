@@ -29,6 +29,16 @@ export function allowedRarities(suggested: Rarity): Rarity[] {
   return RARITIES.slice(Math.max(0, i - 1), i + 2);
 }
 
+// ---------- Task order ----------
+
+// French order that ignores case and accents ("écrire" sits with "ecrire"), and reads numbers as numbers ("2" before "10").
+const titleCollator = new Intl.Collator('fr', { sensitivity: 'base', numeric: true });
+
+/** Rarest first (mythique down to commun), then alphabetical within the same rarity. */
+export function compareTasks(a: { rarity: Rarity; title: string }, b: { rarity: Rarity; title: string }): number {
+  return RARITIES.indexOf(b.rarity) - RARITIES.indexOf(a.rarity) || titleCollator.compare(a.title.trim(), b.title.trim());
+}
+
 // ---------- Levels ----------
 
 /** XP needed to go from level n to n+1. No max level. */
