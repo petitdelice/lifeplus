@@ -52,13 +52,12 @@ function useWide() {
 
 /**
  * GitHub-style grid. Days without tasks stay neutral grey, never red.
- * Today is outlined so the eye lands on it first; tapping a day shows its count below.
+ * Today is outlined so the eye lands on it first; hovering a day shows its count.
  */
 function Heatmap({ counts }: { counts: Record<string, number> }) {
   const wide = useWide();
   const weeks = wide ? 39 : 17;
   const today = dayKey();
-  const [picked, setPicked] = useState(today);
   const offset = (parseDay(today).getDay() + 6) % 7;
   const start = addDays(today, -offset - (weeks - 1) * 7);
   const cols = Array.from({ length: weeks }, (_, w) =>
@@ -86,8 +85,6 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
   const monthTotal = monthDays.reduce((a, c) => a + c.n, 0);
   const active = monthDays.filter((c) => c.n > 0).length;
   const best = monthDays.reduce((b, c) => (c.n > b.n ? c : b), monthDays[0]);
-  const pickedN = counts[picked] ?? 0;
-  const pickedLabel = picked === today ? "Aujourd'hui" : dayLongFmt.format(parseDay(picked));
 
   return (
     <div className="flex flex-col gap-4">
@@ -100,26 +97,13 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
           {[
             { value: fmt(monthTotal), label: monthTotal > 1 ? 'tâches' : 'tâche' },
             { value: fmt(active), label: active > 1 ? 'jours actifs' : 'jour actif' },
-            { value: best.n > 0 ? fmt(best.n) : '–', label: 'meilleur jour', day: best.n > 0 ? best.key : '' },
-          ].map((x) =>
-            x.day ? (
-              <button
-                key={x.label}
-                type="button"
-                onClick={() => setPicked(x.day)}
-                aria-label={`Meilleur jour : ${plural(best.n, 'tâche')} le ${shortFmt.format(parseDay(x.day))}`}
-                className="flex flex-col rounded-xl bg-bg px-3 py-2 text-left"
-              >
-                <span className="font-display text-lg leading-6 font-bold">{x.value}</span>
-                <span className="text-[11px] leading-tight font-semibold text-muted">{x.label}</span>
-              </button>
-            ) : (
-              <div key={x.label} className="flex flex-col rounded-xl bg-bg px-3 py-2">
-                <span className="font-display text-lg leading-6 font-bold">{x.value}</span>
-                <span className="text-[11px] leading-tight font-semibold text-muted">{x.label}</span>
-              </div>
-            ),
-          )}
+            { value: best.n > 0 ? fmt(best.n) : '–', label: 'meilleur jour', title: best.n > 0 ? `Le ${shortFmt.format(parseDay(best.key))}` : undefined },
+          ].map((x) => (
+            <div key={x.label} title={x.title} className="flex flex-col rounded-xl bg-bg px-3 py-2">
+              <span className="font-display text-lg leading-6 font-bold">{x.value}</span>
+              <span className="text-[11px] leading-tight font-semibold text-muted">{x.label}</span>
+            </div>
+          ))}
           </div>
         </div>
       )}
@@ -127,7 +111,7 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
       <div
         className="grid gap-[3px] sm:gap-1"
         style={{ gridTemplateColumns: `auto repeat(${weeks}, minmax(0, 1fr))` }}
-        role="grid"
+        role="img"
         aria-label="Calendrier des tâches terminées"
       >
         <span />
@@ -144,21 +128,15 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
             {cols.map((col, i) => {
               const c = col[d];
               const isToday = c.key === today;
-              const isPicked = c.key === picked;
               if (c.future) return <span key={c.key} />;
               return (
-                <motion.button
+                <motion.div
                   key={c.key}
-                  type="button"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: i * 0.012 }}
-                  onClick={() => setPicked(c.key)}
-                  aria-label={`${isToday ? "Aujourd'hui" : dayLongFmt.format(parseDay(c.key))} : ${plural(c.n, 'tâche')}`}
-                  aria-pressed={isPicked}
-                  className={`aspect-square w-full rounded-[3px] outline-offset-1 sm:rounded-[4px] ${
-                    isPicked ? 'outline-2 outline-ink' : isToday ? 'outline-2 outline-indigo' : ''
-                  }`}
+                  title={`${isToday ? "Aujourd'hui" : dayLongFmt.format(parseDay(c.key))} : ${plural(c.n, 'tâche')}`}
+                  className={`aspect-square w-full rounded-[3px] outline-offset-1 sm:rounded-[4px] ${isToday ? 'outline-2 outline-ink' : ''}`}
                   style={{ background: SHADES[shadeIndex(c.n)] }}
                 />
               );
@@ -167,21 +145,8 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
         ))}
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <motion.div
-          key={picked}
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2.5 rounded-xl bg-bg px-3 py-2"
-          aria-live="polite"
-        >
-          <span className="size-3.5 shrink-0 rounded-[4px]" style={{ background: SHADES[shadeIndex(pickedN)] }} aria-hidden />
-          <span className="text-sm font-semibold text-muted first-letter:uppercase">
-            <span className="text-ink">{pickedLabel}</span> ·{' '}
-            {pickedN > 0 ? <span className="font-bold text-ink">{plural(pickedN, 'tâche')} terminée{pickedN > 1 ? 's' : ''}</span> : picked === today ? 'la journée commence' : 'journée calme'}
-          </span>
-        </motion.div>
-        <div className="flex items-center gap-1 self-end text-[11px] font-semibold text-muted sm:self-auto">
+      <div className="flex justify-end">
+        <div className="flex items-center gap-1 text-[11px] font-semibold text-muted">
           <span className="mr-0.5">Moins</span>
           {SHADES.map((s, i) => (
             <span key={s} title={`${SHADE_LABELS[i]} tâche${i > 1 ? 's' : ''}`} className="size-3 rounded-[3px]" style={{ background: s }} />
