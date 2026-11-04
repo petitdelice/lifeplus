@@ -85,21 +85,35 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm font-semibold text-muted">
-        {total === 0 ? (
-          'Chaque tâche terminée colorera une case. Les plus foncées sont tes plus grosses journées.'
-        ) : (
-          <>
-            <span className="font-bold text-ink">{plural(total, 'tâche')}</span> sur{' '}
-            <span className="font-bold text-ink">{plural(active, 'jour')}</span> ces {wide ? '9' : '4'} derniers mois
-            {best.n > 1 && (
-              <>
-                {' '}· record : <span className="font-bold text-ink">{best.n}</span> le {shortFmt.format(parseDay(best.key))}
-              </>
-            )}
-          </>
-        )}
-      </p>
+      {total === 0 ? (
+        <p className="text-sm font-semibold text-muted">Chaque tâche terminée colorera une case. Les plus foncées sont tes plus grosses journées.</p>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { value: fmt(total), label: total > 1 ? 'tâches' : 'tâche' },
+            { value: fmt(active), label: active > 1 ? 'jours actifs' : 'jour actif' },
+            { value: fmt(best.n), label: 'meilleur jour', day: best.key },
+          ].map((x) =>
+            x.day ? (
+              <button
+                key={x.label}
+                type="button"
+                onClick={() => setPicked(x.day)}
+                aria-label={`Meilleur jour : ${plural(best.n, 'tâche')} le ${shortFmt.format(parseDay(x.day))}`}
+                className="flex flex-col rounded-xl bg-bg px-3 py-2 text-left"
+              >
+                <span className="font-display text-lg leading-6 font-bold">{x.value}</span>
+                <span className="text-[11px] leading-tight font-semibold text-muted">{x.label}</span>
+              </button>
+            ) : (
+              <div key={x.label} className="flex flex-col rounded-xl bg-bg px-3 py-2">
+                <span className="font-display text-lg leading-6 font-bold">{x.value}</span>
+                <span className="text-[11px] leading-tight font-semibold text-muted">{x.label}</span>
+              </div>
+            ),
+          )}
+        </div>
+      )}
 
       <div
         className="grid gap-[3px] sm:gap-1"
