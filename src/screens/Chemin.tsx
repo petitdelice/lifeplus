@@ -86,7 +86,6 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
   const monthTotal = monthDays.reduce((a, c) => a + c.n, 0);
   const active = monthDays.filter((c) => c.n > 0).length;
   const best = monthDays.reduce((b, c) => (c.n > b.n ? c : b), monthDays[0]);
-  const monthName = new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(parseDay(today));
   const pickedN = counts[picked] ?? 0;
   const pickedLabel = picked === today ? "Aujourd'hui" : dayLongFmt.format(parseDay(picked));
 
@@ -96,7 +95,7 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
         <p className="text-sm font-semibold text-muted">Chaque tâche terminée colorera une case. Les plus foncées sont tes plus grosses journées.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold text-muted first-letter:uppercase">En {monthName}</span>
+          <span className="text-xs font-bold text-muted">Ce mois-ci</span>
           <div className="grid grid-cols-3 gap-2">
           {[
             { value: fmt(monthTotal), label: monthTotal > 1 ? 'tâches' : 'tâche' },
@@ -126,7 +125,7 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
       )}
 
       <div
-        className="grid gap-[3px] sm:gap-1"
+        className="grid gap-1"
         style={{ gridTemplateColumns: `auto repeat(${weeks}, minmax(0, 1fr))` }}
         role="grid"
         aria-label="Calendrier des tâches terminées"
@@ -147,21 +146,28 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
               const isToday = c.key === today;
               const isPicked = c.key === picked;
               if (c.future) return <span key={c.key} />;
+              // Thin lines between months: on the left when last week's same day is another month, on top when yesterday is.
+              const month = c.key.slice(0, 7);
+              const lineLeft = i > 0 && addDays(c.key, -7).slice(0, 7) !== month;
+              const lineTop = d > 0 && addDays(c.key, -1).slice(0, 7) !== month;
               return (
-                <motion.button
-                  key={c.key}
-                  type="button"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: i * 0.012 }}
-                  onClick={() => setPicked(c.key)}
-                  aria-label={`${isToday ? "Aujourd'hui" : dayLongFmt.format(parseDay(c.key))} : ${plural(c.n, 'tâche')}`}
-                  aria-pressed={isPicked}
-                  className={`aspect-square w-full rounded-[3px] outline-offset-1 sm:rounded-[4px] ${
-                    isPicked ? 'outline-2 outline-ink' : isToday ? 'outline-2 outline-indigo' : ''
-                  }`}
-                  style={{ background: SHADES[shadeIndex(c.n)] }}
-                />
+                <span key={c.key} className="relative">
+                  {lineLeft && <span className="absolute -top-[3px] -bottom-[3px] -left-[3px] w-0.5 rounded-full bg-[#C4BED8]" aria-hidden />}
+                  {lineTop && <span className="absolute -top-[3px] -right-[3px] -left-[3px] h-0.5 rounded-full bg-[#C4BED8]" aria-hidden />}
+                  <motion.button
+                    type="button"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: i * 0.012 }}
+                    onClick={() => setPicked(c.key)}
+                    aria-label={`${isToday ? "Aujourd'hui" : dayLongFmt.format(parseDay(c.key))} : ${plural(c.n, 'tâche')}`}
+                    aria-pressed={isPicked}
+                    className={`block aspect-square w-full rounded-[3px] outline-offset-1 sm:rounded-[4px] ${
+                      isPicked ? 'outline-2 outline-ink' : isToday ? 'outline-2 outline-indigo' : ''
+                    }`}
+                    style={{ background: SHADES[shadeIndex(c.n)] }}
+                  />
+                </span>
               );
             })}
           </Fragment>
