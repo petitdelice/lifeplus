@@ -35,7 +35,7 @@ const dayLongFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'num
 const SHADES = ['#ECEAF4', '#C9C2FA', '#9D92F7', '#7566F3', '#5B4CF0'];
 const SHADE_LABELS = ['0', '1', '2-3', '4-5', '6+'];
 const shadeIndex = (n: number) => (n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 5 ? 3 : 4);
-const DAY_LABELS = ['Lun', '', 'Mer', '', 'Ven', '', ''];
+const DAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const plural = (n: number, word: string) => `${fmt(n)} ${word}${n > 1 ? 's' : ''}`;
 
 function useWide() {
