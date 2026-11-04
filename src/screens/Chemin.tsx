@@ -56,27 +56,32 @@ function useWide() {
  */
 function Heatmap({ counts }: { counts: Record<string, number> }) {
   const wide = useWide();
-  const weeks = wide ? 39 : 17;
   const today = dayKey();
   const [picked, setPicked] = useState(today);
-  const offset = (parseDay(today).getDay() + 6) % 7;
-  const start = addDays(today, -offset - (weeks - 1) * 7);
-  const cols = Array.from({ length: weeks }, (_, w) =>
-    Array.from({ length: 7 }, (_, d) => {
-      const key = addDays(start, w * 7 + d);
-      return { key, n: counts[key] ?? 0, future: key > today };
-    }),
-  );
 
-  // Month label on the column holding the 1st of the month (the first column too, unless a label follows too closely).
-  const months = cols.map((col, i) => {
-    const first = col.find((c) => c.key.endsWith('-01'));
-    if (first) return monthFmt.format(parseDay(first.key)).replace('.', '');
-    if (i === 0 && !cols.slice(1, 3).some((c) => c.some((x) => x.key.endsWith('-01')))) return monthFmt.format(parseDay(col[0].key)).replace('.', '');
-    return '';
+  // One block of week columns per month, with a small gap between months so each one reads on its own.
+  const monthCount = wide ? 8 : 4;
+  const now = parseDay(today);
+  const blocks = Array.from({ length: monthCount }, (_, k) => {
+    const first = new Date(now.getFullYear(), now.getMonth() - (monthCount - 1 - k), 1);
+    const firstKey = dayKey(first);
+    const lead = (first.getDay() + 6) % 7;
+    const length = k === monthCount - 1 ? now.getDate() : new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+    const cells = Array.from({ length }, (_, i) => {
+      const key = addDays(firstKey, i);
+      return { key, n: counts[key] ?? 0, week: Math.floor((lead + i) / 7), dow: (lead + i) % 7 };
+    });
+    return { label: monthFmt.format(first).replace('.', ''), cells, weeks: cells[cells.length - 1].week + 1 };
   });
+  let col = 2;
+  const placed = blocks.map((bl, k) => {
+    const start = col;
+    col += bl.weeks + 1; // +1: the spacer column after each month
+    return { ...bl, start, index: k };
+  });
+  const template = ['auto', ...placed.map((bl, k) => `repeat(${bl.weeks}, minmax(0, 1fr))${k < placed.length - 1 ? ' 2px' : ''}`)].join(' ');
+  const past = placed.flatMap((bl) => bl.cells);
 
-  const past = cols.flat().filter((c) => !c.future);
   const total = past.reduce((a, c) => a + c.n, 0);
   // The three figures cover the current month only.
   const monthDays = Array.from({ length: parseDay(today).getDate() }, (_, i) => {
@@ -124,50 +129,42 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
         </div>
       )}
 
-      <div
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `auto repeat(${weeks}, minmax(0, 1fr))` }}
-        role="grid"
-        aria-label="Calendrier des tâches terminées"
-      >
-        <span />
-        {months.map((m, i) => (
-          <span key={i} className="h-4 overflow-visible text-[11px] leading-4 font-bold whitespace-nowrap text-muted capitalize">
-            {m}
+      <div className="grid gap-1" style={{ gridTemplateColumns: template }} role="grid" aria-label="Calendrier des tâches terminées">
+        {DAY_LABELS.map((label, d) => (
+          <span
+            key={label}
+            className="pr-1.5 text-[10px] leading-none font-semibold text-off sm:text-[11px]"
+            style={{ gridColumn: 1, gridRow: d + 2, alignSelf: 'center' }}
+          >
+            {label}
           </span>
         ))}
-        {DAY_LABELS.map((label, d) => (
-          <Fragment key={d}>
-            <span className="pr-1.5 text-[10px] leading-none font-semibold text-off sm:text-[11px]" style={{ alignSelf: 'center' }}>
-              {label}
+        {placed.map((bl) => (
+          <Fragment key={bl.label + bl.index}>
+            <span
+              className="h-4 overflow-visible text-[11px] leading-4 font-bold whitespace-nowrap text-muted capitalize"
+              style={{ gridColumn: `${bl.start} / span ${bl.weeks}`, gridRow: 1 }}
+            >
+              {bl.label}
             </span>
-            {cols.map((col, i) => {
-              const c = col[d];
+            {bl.cells.map((c) => {
               const isToday = c.key === today;
               const isPicked = c.key === picked;
-              if (c.future) return <span key={c.key} />;
-              // Thin lines between months: on the left when last week's same day is another month, on top when yesterday is.
-              const month = c.key.slice(0, 7);
-              const lineLeft = i > 0 && addDays(c.key, -7).slice(0, 7) !== month;
-              const lineTop = d > 0 && addDays(c.key, -1).slice(0, 7) !== month;
               return (
-                <span key={c.key} className="relative">
-                  {lineLeft && <span className="absolute -top-[3px] -bottom-[3px] -left-[3px] w-0.5 rounded-full bg-[#C4BED8]" aria-hidden />}
-                  {lineTop && <span className="absolute -top-[3px] -right-[3px] -left-[3px] h-0.5 rounded-full bg-[#C4BED8]" aria-hidden />}
-                  <motion.button
-                    type="button"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: i * 0.012 }}
-                    onClick={() => setPicked(c.key)}
-                    aria-label={`${isToday ? "Aujourd'hui" : dayLongFmt.format(parseDay(c.key))} : ${plural(c.n, 'tâche')}`}
-                    aria-pressed={isPicked}
-                    className={`block aspect-square w-full rounded-[3px] outline-offset-1 sm:rounded-[4px] ${
-                      isPicked ? 'outline-2 outline-ink' : isToday ? 'outline-2 outline-indigo' : ''
-                    }`}
-                    style={{ background: SHADES[shadeIndex(c.n)] }}
-                  />
-                </span>
+                <motion.button
+                  key={c.key}
+                  type="button"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: (bl.start + c.week) * 0.01 }}
+                  onClick={() => setPicked(c.key)}
+                  aria-label={`${isToday ? "Aujourd'hui" : dayLongFmt.format(parseDay(c.key))} : ${plural(c.n, 'tâche')}`}
+                  aria-pressed={isPicked}
+                  className={`block aspect-square w-full rounded-[3px] outline-offset-1 sm:rounded-[4px] ${
+                    isPicked ? 'outline-2 outline-ink' : isToday ? 'outline-2 outline-indigo' : ''
+                  }`}
+                  style={{ gridColumn: bl.start + c.week, gridRow: c.dow + 2, background: SHADES[shadeIndex(c.n)] }}
+                />
               );
             })}
           </Fragment>
