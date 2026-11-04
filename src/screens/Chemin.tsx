@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useGame, snapshot } from '../store/game';
 import { dayCounts, levelDaysAgo, rarityCounts, type MomentKind } from '../game/engine';
 import { BADGES } from '../game/badges';
@@ -30,44 +30,141 @@ function Tile({ label, value, icon }: { label: string; value: string; icon?: Rea
   );
 }
 
-/** GitHub-style grid. Days without tasks stay neutral grey, never red. */
-function Heatmap({ counts, weeks }: { counts: Record<string, number>; weeks: number }) {
+const monthFmt = new Intl.DateTimeFormat('fr-FR', { month: 'short' });
+const dayLongFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+const SHADES = ['#ECEAF4', '#C9C2FA', '#9D92F7', '#7566F3', '#5B4CF0'];
+const SHADE_LABELS = ['0', '1', '2-3', '4-5', '6+'];
+const shadeIndex = (n: number) => (n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 5 ? 3 : 4);
+const DAY_LABELS = ['Lun', '', 'Mer', '', 'Ven', '', ''];
+const plural = (n: number, word: string) => `${fmt(n)} ${word}${n > 1 ? 's' : ''}`;
+
+function useWide() {
+  const query = '(min-width: 640px)';
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const on = () => setWide(m.matches);
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  return wide;
+}
+
+/**
+ * GitHub-style grid. Days without tasks stay neutral grey, never red.
+ * Today is outlined so the eye lands on it first; tapping a day shows its count below.
+ */
+function Heatmap({ counts }: { counts: Record<string, number> }) {
+  const wide = useWide();
+  const weeks = wide ? 39 : 17;
   const today = dayKey();
+  const [picked, setPicked] = useState(today);
   const offset = (parseDay(today).getDay() + 6) % 7;
   const start = addDays(today, -offset - (weeks - 1) * 7);
-  const shades = ['#ECEAF4', '#C9C2FA', '#9D92F7', '#7566F3', '#5B4CF0'];
-  const shade = (n: number) => shades[n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 5 ? 3 : 4];
   const cols = Array.from({ length: weeks }, (_, w) =>
     Array.from({ length: 7 }, (_, d) => {
       const key = addDays(start, w * 7 + d);
       return { key, n: counts[key] ?? 0, future: key > today };
     }),
   );
+
+  // Month label on the column holding the 1st of the month (the first column too, unless a label follows too closely).
+  const months = cols.map((col, i) => {
+    const first = col.find((c) => c.key.endsWith('-01'));
+    if (first) return monthFmt.format(parseDay(first.key)).replace('.', '');
+    if (i === 0 && !cols.slice(1, 3).some((c) => c.some((x) => x.key.endsWith('-01')))) return monthFmt.format(parseDay(col[0].key)).replace('.', '');
+    return '';
+  });
+
+  const past = cols.flat().filter((c) => !c.future);
+  const total = past.reduce((a, c) => a + c.n, 0);
+  const active = past.filter((c) => c.n > 0).length;
+  const best = past.reduce((b, c) => (c.n > b.n ? c : b), past[0]);
+  const pickedN = counts[picked] ?? 0;
+  const pickedLabel = picked === today ? "Aujourd'hui" : dayLongFmt.format(parseDay(picked));
+
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex gap-[3px] overflow-x-auto pb-1" role="img" aria-label="Calendrier des tâches terminées">
-        {cols.map((col, i) => (
-          <div key={i} className="flex flex-col gap-[3px]">
-            {col.map((c) => (
-              <motion.div
-                key={c.key}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: i * 0.012 }}
-                title={c.future ? undefined : `${shortFmt.format(parseDay(c.key))} : ${c.n} tâche${c.n > 1 ? 's' : ''}`}
-                className="size-3.5 rounded-[4px]"
-                style={{ background: c.future ? 'transparent' : shade(c.n) }}
-              />
-            ))}
-          </div>
+    <div className="flex flex-col gap-4">
+      <p className="text-sm font-semibold text-muted">
+        {total === 0 ? (
+          'Chaque tâche terminée colorera une case. Les plus foncées sont tes plus grosses journées.'
+        ) : (
+          <>
+            <span className="font-bold text-ink">{plural(total, 'tâche')}</span> sur{' '}
+            <span className="font-bold text-ink">{plural(active, 'jour')}</span> ces {wide ? '9' : '4'} derniers mois
+            {best.n > 1 && (
+              <>
+                {' '}· record : <span className="font-bold text-ink">{best.n}</span> le {shortFmt.format(parseDay(best.key))}
+              </>
+            )}
+          </>
+        )}
+      </p>
+
+      <div
+        className="grid gap-[3px] sm:gap-1"
+        style={{ gridTemplateColumns: `auto repeat(${weeks}, minmax(0, 1fr))` }}
+        role="grid"
+        aria-label="Calendrier des tâches terminées"
+      >
+        <span />
+        {months.map((m, i) => (
+          <span key={i} className="h-4 overflow-visible text-[11px] leading-4 font-bold whitespace-nowrap text-muted capitalize">
+            {m}
+          </span>
+        ))}
+        {DAY_LABELS.map((label, d) => (
+          <Fragment key={d}>
+            <span className="pr-1.5 text-[10px] leading-none font-semibold text-off sm:text-[11px]" style={{ alignSelf: 'center' }}>
+              {label}
+            </span>
+            {cols.map((col, i) => {
+              const c = col[d];
+              const isToday = c.key === today;
+              const isPicked = c.key === picked;
+              if (c.future) return <span key={c.key} />;
+              return (
+                <motion.button
+                  key={c.key}
+                  type="button"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: i * 0.012 }}
+                  onClick={() => setPicked(c.key)}
+                  aria-label={`${isToday ? "Aujourd'hui" : dayLongFmt.format(parseDay(c.key))} : ${plural(c.n, 'tâche')}`}
+                  aria-pressed={isPicked}
+                  className={`aspect-square w-full rounded-[3px] outline-offset-1 sm:rounded-[4px] ${
+                    isPicked ? 'outline-2 outline-ink' : isToday ? 'outline-2 outline-indigo' : ''
+                  }`}
+                  style={{ background: SHADES[shadeIndex(c.n)] }}
+                />
+              );
+            })}
+          </Fragment>
         ))}
       </div>
-      <div className="flex items-center gap-1.5 self-end text-[11px] font-semibold text-muted">
-        Moins
-        {shades.map((s) => (
-          <span key={s} className="size-3 rounded-[3px]" style={{ background: s }} />
-        ))}
-        Plus
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <motion.div
+          key={picked}
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2.5 rounded-xl bg-bg px-3 py-2"
+          aria-live="polite"
+        >
+          <span className="size-3.5 shrink-0 rounded-[4px]" style={{ background: SHADES[shadeIndex(pickedN)] }} aria-hidden />
+          <span className="text-sm font-semibold text-muted first-letter:uppercase">
+            <span className="text-ink">{pickedLabel}</span> ·{' '}
+            {pickedN > 0 ? <span className="font-bold text-ink">{plural(pickedN, 'tâche')} terminée{pickedN > 1 ? 's' : ''}</span> : picked === today ? 'la journée commence' : 'journée calme'}
+          </span>
+        </motion.div>
+        <div className="flex items-center gap-1 self-end text-[11px] font-semibold text-muted sm:self-auto">
+          <span className="mr-0.5">Moins</span>
+          {SHADES.map((s, i) => (
+            <span key={s} title={`${SHADE_LABELS[i]} tâche${i > 1 ? 's' : ''}`} className="size-3 rounded-[3px]" style={{ background: s }} />
+          ))}
+          <span className="ml-0.5">Plus</span>
+        </div>
       </div>
     </div>
   );
@@ -203,7 +300,7 @@ export function CheminScreen() {
 
       <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-card">
         <h2 className="font-display text-lg font-bold">Calendrier</h2>
-        <Heatmap counts={counts} weeks={18} />
+        <Heatmap counts={counts} />
       </section>
 
       <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-card">
