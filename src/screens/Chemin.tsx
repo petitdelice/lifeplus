@@ -78,8 +78,15 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
 
   const past = cols.flat().filter((c) => !c.future);
   const total = past.reduce((a, c) => a + c.n, 0);
-  const active = past.filter((c) => c.n > 0).length;
-  const best = past.reduce((b, c) => (c.n > b.n ? c : b), past[0]);
+  // The three figures cover the current month only.
+  const monthDays = Array.from({ length: parseDay(today).getDate() }, (_, i) => {
+    const key = addDays(today, -i);
+    return { key, n: counts[key] ?? 0 };
+  });
+  const monthTotal = monthDays.reduce((a, c) => a + c.n, 0);
+  const active = monthDays.filter((c) => c.n > 0).length;
+  const best = monthDays.reduce((b, c) => (c.n > b.n ? c : b), monthDays[0]);
+  const monthName = new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(parseDay(today));
   const pickedN = counts[picked] ?? 0;
   const pickedLabel = picked === today ? "Aujourd'hui" : dayLongFmt.format(parseDay(picked));
 
@@ -88,11 +95,13 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
       {total === 0 ? (
         <p className="text-sm font-semibold text-muted">Chaque tâche terminée colorera une case. Les plus foncées sont tes plus grosses journées.</p>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-bold text-muted first-letter:uppercase">En {monthName}</span>
+          <div className="grid grid-cols-3 gap-2">
           {[
-            { value: fmt(total), label: total > 1 ? 'tâches' : 'tâche' },
+            { value: fmt(monthTotal), label: monthTotal > 1 ? 'tâches' : 'tâche' },
             { value: fmt(active), label: active > 1 ? 'jours actifs' : 'jour actif' },
-            { value: fmt(best.n), label: 'meilleur jour', day: best.key },
+            { value: best.n > 0 ? fmt(best.n) : '–', label: 'meilleur jour', day: best.n > 0 ? best.key : '' },
           ].map((x) =>
             x.day ? (
               <button
@@ -112,6 +121,7 @@ function Heatmap({ counts }: { counts: Record<string, number> }) {
               </div>
             ),
           )}
+          </div>
         </div>
       )}
 
