@@ -222,56 +222,35 @@ function ProjectCard({ task }: { task: Task }) {
 }
 
 /** Aujourd'hui only shows one line for the routines, so the day stays light; the cards live in Récurrentes. */
-/** "2/3 aujourd'hui": fills with every task ticked today, turns gold past the goal. Says nothing when it is not reached. */
+/** One slim line, "Objectif 2/3": fills with every task ticked today, turns gold past the goal. Says nothing when it is not reached. */
 function DailyGoal({ done, goal }: { done: number; goal: number }) {
   const reached = done >= goal;
   const over = done > goal;
   const color = over ? 'var(--color-lemon)' : reached ? 'var(--color-mint)' : 'var(--color-indigo)';
-  const left = goal - done;
   return (
-    <motion.div
+    <motion.a
       layout
-      initial={{ opacity: 0, y: 12 }}
+      href="#/profil"
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       data-testid="daily-goal"
-      className="flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-card"
+      aria-label={`Objectif du jour : ${done} sur ${goal}. Modifier dans le profil`}
+      className="flex items-center gap-3 rounded-xl bg-white px-3.5 py-2.5 text-ink no-underline shadow-card"
     >
-      <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-xl ${over ? 'bg-lemon-soft' : reached ? 'bg-mint-soft' : 'bg-indigo-soft'}`} aria-hidden>
-        🎯
+      <span className="shrink-0 font-display text-sm font-bold">Objectif{reached ? ' ✓' : ''}</span>
+      <span className="h-2 grow overflow-hidden rounded-full bg-indigo-soft">
+        <motion.span
+          className="block h-full rounded-full"
+          style={{ background: color }}
+          initial={false}
+          animate={{ width: `${Math.min(1, done / goal) * 100}%` }}
+          transition={{ type: 'spring', damping: 16 }}
+        />
       </span>
-      <span className="flex min-w-0 grow flex-col gap-1.5">
-        <span className="flex items-baseline justify-between gap-2">
-          <span className="font-display text-base font-bold">Objectif du jour</span>
-          <span className="shrink-0 text-xs font-bold text-muted">
-            {done}/{goal}
-          </span>
-        </span>
-        <span
-          className="h-2 overflow-hidden rounded-full bg-indigo-soft"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={goal}
-          aria-valuenow={Math.min(done, goal)}
-          aria-label="Objectif du jour"
-        >
-          <motion.span
-            className="block h-full rounded-full"
-            style={{ background: color }}
-            initial={false}
-            animate={{ width: `${Math.min(1, done / goal) * 100}%` }}
-            transition={{ type: 'spring', damping: 16 }}
-          />
-        </span>
-        <span className="flex items-baseline justify-between gap-2 text-xs font-semibold text-muted">
-          <span>
-            {over ? `Dépassé de ${done - goal}, quelle journée\u00a0!` : reached ? 'Atteint, bravo\u00a0!' : `Encore ${left} tâche${left > 1 ? 's' : ''}`}
-          </span>
-          <a href="#/profil" className="shrink-0 font-bold text-indigo no-underline">
-            Modifier
-          </a>
-        </span>
+      <span className="shrink-0 text-xs font-bold text-muted">
+        {done}/{goal}
       </span>
-    </motion.div>
+    </motion.a>
   );
 }
 
