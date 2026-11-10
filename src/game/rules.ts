@@ -92,6 +92,17 @@ export function nextStreakTier(streak: number) {
 export const FREEZE_PRICE = 60;
 export const FREEZE_MAX = 2;
 
+// ---------- Surprise bonus ----------
+
+/** Chance that a ticked task doubles its base éclats: a bit higher for rarer tasks, about 1 in 10 on average. */
+export const SURPRISE_CHANCE: Record<Rarity, number> = {
+  commun: 0.06,
+  rare: 0.08,
+  epique: 0.1,
+  legendaire: 0.12,
+  mythique: 0.15,
+};
+
 // ---------- Task bonuses ----------
 
 /** +10 % per on-time occurrence in a row (the first one has no bonus), capped at +50 %. */

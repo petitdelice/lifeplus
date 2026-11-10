@@ -4,6 +4,7 @@ import {
   type Recurrence,
   RARITY_GAINS,
   STREAK_TIERS,
+  SURPRISE_CHANCE,
   FREE_UNLOCKS,
   FREEZE_MAX,
   FREEZE_PRICE,
@@ -93,6 +94,8 @@ export interface Completion {
   eclats: number;
   levelBonus: number;
   chest: number;
+  /** Surprise bonus (base éclats once more), at most one completion a day. Absent on old saves. */
+  surprise?: number;
   prevTask: Task;
   prevStreak: Streak;
   /** Badges and moments this completion created, removed again if it is unticked. */
@@ -149,6 +152,7 @@ export interface GameState {
 export type GameEvent =
   | { type: 'levelup'; level: number; bonus: number }
   | { type: 'chest'; name: string; amount: number; days: number }
+  | { type: 'surprise'; amount: number }
   | { type: 'badge'; id: string }
   | { type: 'project'; title: string; xp: number; eclats: number }
   | { type: 'stage'; project: string; title: string; index: number; total: number }
@@ -366,7 +370,11 @@ export interface CompleteResult {
   eclats: number;
 }
 
-export function completeTask(state: GameState, taskId: string, stepId?: string, today = dayKey()): CompleteResult | null {
+/**
+ * `roll` decides the surprise bonus: the store passes Math.random(); the default 1 never wins,
+ * so tests and the tutorial stay predictable.
+ */
+export function completeTask(state: GameState, taskId: string, stepId?: string, today = dayKey(), roll = 1): CompleteResult | null {
   const task = state.tasks.find((t) => t.id === taskId);
   if (!task) return null;
   if (isDone(task, today, stepId)) return null;
@@ -480,7 +488,15 @@ export function completeTask(state: GameState, taskId: string, stepId?: string, 
     if (LEVEL_BADGES.includes(l)) award(`level-${l}`);
   }
 
-  const gained = eclats + lvlBonus + chest;
+  // Surprise: base éclats once more, no XP, outside streak and regularity bonuses, at most once a day.
+  let surprise = 0;
+  const surpriseToday = state.completions.some((c) => c.day === today && (c.surprise ?? 0) > 0);
+  if (!surpriseToday && roll < SURPRISE_CHANCE[rarity]) {
+    surprise = base.eclats;
+    events.push({ type: 'surprise', amount: surprise });
+  }
+
+  const gained = eclats + lvlBonus + chest + surprise;
   const completion: Completion = {
     id: uid('c'),
     taskId,
@@ -491,6 +507,7 @@ export function completeTask(state: GameState, taskId: string, stepId?: string, 
     eclats,
     levelBonus: lvlBonus,
     chest,
+    surprise,
     prevTask,
     prevStreak,
     ...created,
@@ -525,6 +542,7 @@ const ORDER: Record<GameEvent['type'], number> = {
   stage: 1,
   levelup: 2,
   chest: 3,
+  surprise: 3,
   badge: 4,
 };
 const order = (e: GameEvent) => ORDER[e.type];
@@ -540,7 +558,7 @@ export function undoTask(state: GameState, taskId: string, stepId?: string, toda
   const rollStreak = !othersToday;
   const removedBadges = rollStreak ? [...c.badges, ...c.streakBadges] : c.badges;
   const removedMoments = rollStreak ? [...c.moments, ...c.streakMoments] : c.moments;
-  const lost = c.eclats + c.levelBonus + (rollStreak ? c.chest : 0);
+  const lost = c.eclats + c.levelBonus + (c.surprise ?? 0) + (rollStreak ? c.chest : 0);
 
   const badges = { ...state.badges };
   for (const id of removedBadges) delete badges[id];
