@@ -114,8 +114,13 @@ function content(e: GameEvent) {
       return {
         full: false,
         big: <span className="text-6xl">🌱</span>,
-        title: 'Nouvelle série',
-        text: `Ton record de ${e.best} jour${e.best > 1 ? 's' : ''} reste gravé. On repart ?`,
+        title: e.lost > 1 ? `Belle série de ${e.lost} jours !` : 'Nouvelle série',
+        text:
+          e.best > e.lost
+            ? `Ton record de ${e.best} jours reste gravé dans ton Chemin. On repart ?`
+            : e.lost > 1
+              ? `C’est ton record, il reste gravé dans ton Chemin. On repart ?`
+              : 'Chaque jour avec une tâche fait grandir ta série. On repart ?',
         extra: 'Tes éclats et ton XP sont toujours là.',
         cta: 'On repart',
       };
