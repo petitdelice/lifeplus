@@ -79,6 +79,16 @@ export function StreakChip() {
   );
 }
 
+/** A gains multiplier shown with the currency icon, so the bonus reads as Éclats. */
+function Bonus({ mult }: { mult: number }) {
+  return (
+    <span className="inline-flex items-center gap-0.5 whitespace-nowrap align-[-2px]">
+      <Spark size={13} className="text-grape" />
+      {fmtMult(mult)}
+    </span>
+  );
+}
+
 export function Header() {
   const totalXp = useGame((s) => s.totalXp);
   const streakState = useGame((s) => s.streak);
@@ -143,7 +153,16 @@ export function Header() {
         >
           <span className="flex items-start gap-1.5">
             <Flame size={14} className="mt-0.5 shrink-0" style={{ color: flameColor(streak) }} />
-            {nudge.text}
+            <span>
+              {nudge.text}
+              {nudge.bonus !== undefined && (
+                <>
+                  {' '}
+                  <Bonus mult={nudge.bonus} />
+                  {nudge.end}
+                </>
+              )}
+            </span>
           </span>
           {nudge.sub && (
             <span className="flex items-start gap-1.5 font-semibold opacity-80">
@@ -155,9 +174,15 @@ export function Header() {
       ) : (
         streak > 0 && (
           <div className="self-start rounded-xl bg-orange-soft px-2.5 py-1.5 text-[13px] font-bold text-amber-ink">
-            {mult > 1
-              ? `Streak de ${streak} jours : tous tes gains ${fmtMult(mult)}`
-              : `Streak de ${streak} jour${streak > 1 ? 's' : ''} : bonus ${fmtMult(next!.mult)} à ${next!.days} jours`}
+            {mult > 1 ? (
+              <>
+                Streak de {streak} jours : tous tes gains <Bonus mult={mult} />
+              </>
+            ) : (
+              <>
+                Streak de {streak} jour{streak > 1 ? 's' : ''} : bonus <Bonus mult={next!.mult} /> à {next!.days} jours
+              </>
+            )}
           </div>
         )
       )}

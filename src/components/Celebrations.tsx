@@ -121,7 +121,7 @@ function content(e: GameEvent) {
             : e.lost > 1
               ? `C’est ton record, il reste gravé dans ton Chemin. On repart ?`
               : 'Chaque jour avec une tâche fait grandir ta série. On repart ?',
-        extra: 'Tes éclats et ton XP sont toujours là. Une tâche aujourd’hui et ta nouvelle série démarre.',
+        extra: 'Tes éclats et ton XP sont toujours là.',
         cta: 'On repart',
       };
     case 'freeze-used':
