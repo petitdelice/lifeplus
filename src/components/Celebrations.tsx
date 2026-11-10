@@ -110,6 +110,19 @@ function content(e: GameEvent) {
         cta: 'Super',
       };
     }
+    case 'surprise':
+      return {
+        full: false,
+        big: (
+          <motion.span className="text-6xl" animate={{ rotate: [0, -12, 12, -8, 8, 0], scale: [1, 1.15, 1] }} transition={{ duration: 0.9 }}>
+            ✨
+          </motion.span>
+        ),
+        title: 'Surprise\u00a0!',
+        text: 'Les éclats de base de cette tâche sont doublés.',
+        extra: `+${fmt(e.amount)} éclats`,
+        cta: 'Génial',
+      };
     case 'streak-broken':
       return {
         full: false,

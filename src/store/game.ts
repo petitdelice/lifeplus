@@ -90,7 +90,7 @@ export const useGame = create<Store>()(
         updateTask: (id, input) => set(E.updateTask(snapshot(get()), id, input)),
         deleteTask: (id) => set(E.deleteTask(snapshot(get()), id)),
         complete: (taskId, stepId) => {
-          const r = E.completeTask(snapshot(get()), taskId, stepId);
+          const r = E.completeTask(snapshot(get()), taskId, stepId, undefined, sandbox ? 1 : Math.random());
           if (!r) return null;
           set({ ...r.state, events: [...get().events, ...r.events] });
           return { xp: r.xp, eclats: r.eclats };
