@@ -4,6 +4,10 @@ import {
   type Recurrence,
   RARITY_GAINS,
   STREAK_TIERS,
+  DAILY_GOAL_BONUS,
+  DAILY_GOAL_DEFAULT,
+  DAILY_GOAL_MAX,
+  DAILY_GOAL_MIN,
   SURPRISE_CHANCE,
   FREE_UNLOCKS,
   FREEZE_MAX,
@@ -96,6 +100,8 @@ export interface Completion {
   chest: number;
   /** Surprise bonus (base éclats once more), at most one completion a day. Absent on old saves. */
   surprise?: number;
+  /** Daily goal bonus, on the completion that reached the goal. Absent on old saves. */
+  goalBonus?: number;
   prevTask: Task;
   prevStreak: Streak;
   /** Badges and moments this completion created, removed again if it is unticked. */
@@ -147,12 +153,15 @@ export interface GameState {
   tickets: number;
   badges: Record<string, string>;
   moments: Moment[];
+  /** Tasks the person wants to do each day. */
+  dailyGoal: number;
 }
 
 export type GameEvent =
   | { type: 'levelup'; level: number; bonus: number }
   | { type: 'chest'; name: string; amount: number; days: number }
   | { type: 'surprise'; amount: number }
+  | { type: 'goal'; goal: number; amount: number }
   | { type: 'badge'; id: string }
   | { type: 'project'; title: string; xp: number; eclats: number }
   | { type: 'stage'; project: string; title: string; index: number; total: number }
@@ -181,6 +190,7 @@ export function initialState(today = dayKey()): GameState {
     rewards: DEFAULT_REWARDS.map((r) => ({ ...r, unlocked: false, gift: false, custom: false, uses: 0 })),
     shopVisited: false,
     freeUnlocks: 0,
+    dailyGoal: DAILY_GOAL_DEFAULT,
     losses: 0,
     tickets: 0,
     badges: {},
@@ -262,6 +272,7 @@ function migrateTask(t: Task): Task {
 export function migrateState(state: GameState): GameState {
   return {
     ...state,
+    dailyGoal: clampGoal(state.dailyGoal ?? DAILY_GOAL_DEFAULT),
     tasks: (state.tasks ?? []).map(migrateTask),
     completions: (state.completions ?? []).map((c) => (c.prevTask ? { ...c, prevTask: migrateTask(c.prevTask) } : c)),
   };
@@ -496,7 +507,15 @@ export function completeTask(state: GameState, taskId: string, stepId?: string, 
     events.push({ type: 'surprise', amount: surprise });
   }
 
-  const gained = eclats + lvlBonus + chest + surprise;
+  // Daily goal: a small celebration and bonus once a day, nothing at all when it is not reached.
+  let goalBonus = 0;
+  const today_ = state.completions.filter((c) => c.day === today);
+  if (today_.length + 1 >= state.dailyGoal && !today_.some((c) => (c.goalBonus ?? 0) > 0)) {
+    goalBonus = DAILY_GOAL_BONUS;
+    events.push({ type: 'goal', goal: state.dailyGoal, amount: goalBonus });
+  }
+
+  const gained = eclats + lvlBonus + chest + surprise + goalBonus;
   const completion: Completion = {
     id: uid('c'),
     taskId,
@@ -508,6 +527,7 @@ export function completeTask(state: GameState, taskId: string, stepId?: string, 
     levelBonus: lvlBonus,
     chest,
     surprise,
+    goalBonus,
     prevTask,
     prevStreak,
     ...created,
@@ -543,6 +563,7 @@ const ORDER: Record<GameEvent['type'], number> = {
   levelup: 2,
   chest: 3,
   surprise: 3,
+  goal: 3,
   badge: 4,
 };
 const order = (e: GameEvent) => ORDER[e.type];
@@ -558,7 +579,7 @@ export function undoTask(state: GameState, taskId: string, stepId?: string, toda
   const rollStreak = !othersToday;
   const removedBadges = rollStreak ? [...c.badges, ...c.streakBadges] : c.badges;
   const removedMoments = rollStreak ? [...c.moments, ...c.streakMoments] : c.moments;
-  const lost = c.eclats + c.levelBonus + (c.surprise ?? 0) + (rollStreak ? c.chest : 0);
+  const lost = c.eclats + c.levelBonus + (c.surprise ?? 0) + (c.goalBonus ?? 0) + (rollStreak ? c.chest : 0);
 
   const badges = { ...state.badges };
   for (const id of removedBadges) delete badges[id];
@@ -598,6 +619,20 @@ function earliest(a: Streak, b: Streak): Streak {
   if (!a.lastDay) return a;
   if (!b.lastDay) return b;
   return a.lastDay <= b.lastDay ? a : b;
+}
+
+// ---------- Daily goal ----------
+
+export const clampGoal = (n: number) =>
+  Number.isFinite(n) ? Math.min(DAILY_GOAL_MAX, Math.max(DAILY_GOAL_MIN, Math.round(n))) : DAILY_GOAL_DEFAULT;
+
+export function setDailyGoal(state: GameState, goal: number): GameState {
+  return { ...state, dailyGoal: clampGoal(goal) };
+}
+
+/** Tasks ticked today, all kinds together. */
+export function doneToday(state: GameState, today = dayKey()): number {
+  return state.completions.filter((c) => c.day === today).length;
 }
 
 // ---------- Day change ----------

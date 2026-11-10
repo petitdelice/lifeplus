@@ -103,6 +103,14 @@ export const SURPRISE_CHANCE: Record<Rarity, number> = {
   mythique: 0.15,
 };
 
+// ---------- Daily goal ----------
+
+export const DAILY_GOAL_DEFAULT = 3;
+export const DAILY_GOAL_MIN = 1;
+export const DAILY_GOAL_MAX = 10;
+/** Éclats once a day when the goal is reached. */
+export const DAILY_GOAL_BONUS = 10;
+
 // ---------- Task bonuses ----------
 
 /** +10 % per on-time occurrence in a row (the first one has no bonus), capped at +50 %. */

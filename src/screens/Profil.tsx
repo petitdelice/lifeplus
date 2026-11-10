@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useGame, snapshot } from '../store/game';
 import { BUY_ME_A_COFFEE_URL } from '../config';
-import { STREAK_TIERS, levelInfo } from '../game/rules';
+import { DAILY_GOAL_BONUS, DAILY_GOAL_MAX, DAILY_GOAL_MIN, STREAK_TIERS, levelInfo } from '../game/rules';
 import { fmt, fmtMult } from '../game/rarity';
 import { Button, Confirm } from '../components/ui';
 import { Coffee } from '../components/icons';
@@ -12,13 +12,14 @@ const RULES: [string, string][] = [
   ['Raretés', 'À la création, tu dis combien de temps prend la tâche, quelle flemme elle te donne et si elle est importante pour toi. Plus elle est pénible ou importante, plus elle rapporte.'],
   ['Types', 'Les tâches récurrentes gagnent +10 % par fois d’affilée (jusqu’à +50 %). Les projets rapportent plus à chaque étape, et la dernière ajoute 50 % de bonus.'],
   ['Streak', `Un jour compte dès qu’une tâche est faite. Bonus : ${STREAK_TIERS.map((t) => `${fmtMult(t.mult)} à ${t.days} jours`).join(', ')}.`],
+  ['Objectif du jour', `Choisis combien de tâches tu veux faire par jour. Une fois atteint : une petite fête et ${DAILY_GOAL_BONUS} éclats, une fois par jour. Pas atteint ? Rien ne se passe.`],
   ['Shop', 'Un plaisir se débloque une fois (3 × son prix), puis se paie à chaque utilisation. Le gamble coûte la moitié du prix : si la chance te sourit, le plaisir est à toi.'],
   ['Règle d’or', 'Les éclats et l’XP gagnés ne sont jamais retirés : ils représentent ton travail. Seuls les bonus peuvent retomber.'],
 ];
 
 export function ProfilScreen() {
   const state = useGame();
-  const { importData, resetAll, showToast } = state;
+  const { importData, resetAll, showToast, setDailyGoal } = state;
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const level = levelInfo(state.totalXp).level;
@@ -59,6 +60,36 @@ export function ProfilScreen() {
           </span>
         </div>
       </div>
+
+      <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-card" data-testid="goal-setting">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="font-display text-lg font-bold">Objectif du jour</h2>
+          <span className="text-sm font-medium text-muted">Mieux vaut un petit objectif tenu qu’un gros raté.</span>
+        </div>
+        <div className="flex items-center gap-3" role="group" aria-label="Objectif du jour">
+          <button
+            type="button"
+            className="press flex size-10 shrink-0 items-center justify-center rounded-full bg-indigo-soft font-display text-xl font-bold text-indigo disabled:opacity-40"
+            onClick={() => setDailyGoal(state.dailyGoal - 1)}
+            disabled={state.dailyGoal <= DAILY_GOAL_MIN}
+            aria-label="Une tâche de moins"
+          >
+            −
+          </button>
+          <span className="min-w-36 text-center font-display text-lg font-bold" aria-live="polite">
+            {state.dailyGoal} tâche{state.dailyGoal > 1 ? 's' : ''} par jour
+          </span>
+          <button
+            type="button"
+            className="press flex size-10 shrink-0 items-center justify-center rounded-full bg-indigo-soft font-display text-xl font-bold text-indigo disabled:opacity-40"
+            onClick={() => setDailyGoal(state.dailyGoal + 1)}
+            disabled={state.dailyGoal >= DAILY_GOAL_MAX}
+            aria-label="Une tâche de plus"
+          >
+            +
+          </button>
+        </div>
+      </section>
 
       {BUY_ME_A_COFFEE_URL && (
         <section className="flex flex-col gap-3 rounded-3xl bg-lemon-soft p-5">

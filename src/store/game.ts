@@ -30,6 +30,7 @@ interface Store extends GameState {
   gamble: (id: string) => E.GambleResult | null;
   spendTicket: (id: string) => boolean;
   buyFreeze: () => boolean;
+  setDailyGoal: (goal: number) => void;
   addReward: (input: RewardInput) => void;
   deleteReward: (id: string) => void;
 
@@ -132,6 +133,7 @@ export const useGame = create<Store>()(
         shiftEvent: () => set({ events: get().events.slice(1) }),
         pushEvents: (events) => set({ events: [...get().events, ...events] }),
         showToast: (text, kind = 'good') => set({ toast: { id: ++toastId, text, kind } }),
+        setDailyGoal: (goal) => set(E.setDailyGoal(snapshot(get()), goal)),
         importData: (data) => set({ ...E.migrateState({ ...E.initialState(), ...data }), events: [] }),
         resetAll: () => set({ ...E.initialState(), events: [], toast: null }),
       };

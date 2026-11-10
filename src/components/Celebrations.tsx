@@ -110,6 +110,19 @@ function content(e: GameEvent) {
         cta: 'Super',
       };
     }
+    case 'goal':
+      return {
+        full: false,
+        big: (
+          <motion.span className="text-6xl" animate={{ scale: [0.6, 1.2, 1] }} transition={{ duration: 0.6 }}>
+            🎯
+          </motion.span>
+        ),
+        title: 'Objectif du jour atteint\u00a0!',
+        text: `${e.goal} tâche${e.goal > 1 ? 's' : ''} aujourd’hui, bravo. Tout le reste est du bonus.`,
+        extra: `+${fmt(e.amount)} éclats`,
+        cta: 'Super',
+      };
     case 'surprise':
       return {
         full: false,
@@ -179,7 +192,7 @@ export function Celebrations() {
           aria-label={c.title}
         >
           {c.full && <Rays />}
-          {(c.full || e.type === 'chest' || e.type === 'badge' || e.type === 'stage') && <Confetti count={c.full ? 48 : 24} />}
+          {(c.full || e.type === 'chest' || e.type === 'badge' || e.type === 'stage' || e.type === 'goal' || e.type === 'surprise') && <Confetti count={c.full ? 48 : 24} />}
           <motion.div
             initial={{ scale: 0.4, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
